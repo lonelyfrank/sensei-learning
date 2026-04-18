@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
@@ -9,5 +10,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+  },
+  resolve: {
+    alias: {
+      // Permette di importare i corsi con @courses/nomefile
+      '@courses': path.resolve(__dirname, 'courses'),
+    },
   },
 })
