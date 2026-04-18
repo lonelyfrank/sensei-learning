@@ -4,3 +4,4 @@ dist-electron/
 *.db
 .env
 .DS_Store
+courses/*.jsx
