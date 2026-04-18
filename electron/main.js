@@ -99,3 +99,20 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
+
+// Rimuove un corso dal database e cancella il file dalla cartella courses
+ipcMain.handle('remove-course', (event, courseId, filename) => {
+  // Elimina il file .jsx dalla cartella courses
+  const filePath = path.join(app.getAppPath(), 'courses', filename)
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath)
+  }
+
+  // Elimina i progressi del corso
+  db.prepare('DELETE FROM progress WHERE course_id = ?').run(courseId)
+
+  // Elimina il corso dal database
+  db.prepare('DELETE FROM courses WHERE id = ?').run(courseId)
+
+  return { success: true }
+})

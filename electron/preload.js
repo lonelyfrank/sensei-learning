@@ -22,4 +22,8 @@ contextBridge.exposeInMainWorld('sensei', {
   getProgress: (courseId) =>
     ipcRenderer.invoke('get-progress', courseId),
 
+  // Rimuove un corso dal database e dal filesystem
+  removeCourse: (courseId, filename) =>
+    ipcRenderer.invoke('remove-course', courseId, filename),
+
 })
