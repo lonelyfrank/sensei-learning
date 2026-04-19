@@ -1,5 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react'
 
+// Nomi di icone Lucide che collidono con built-in JavaScript
+// Questi vanno rinominati per evitare di sovrascrivere i globali nativi
+const JS_BUILTINS = ['Map', 'Set', 'Array', 'Object', 'Error', 'Event', 'URL', 'Image']
+
 function Course({ course, onBack, onProgressUpdate }) {
   const [courseCode, setCourseCode] = useState(null)
   const [lucideBundle, setLucideBundle] = useState(null)
@@ -8,10 +12,7 @@ function Course({ course, onBack, onProgressUpdate }) {
 
   useEffect(() => {
     loadCourse()
-
-    const handleMessage = (event) => {
-      handleStorageMessage(event, course.id)
-    }
+    const handleMessage = (event) => handleStorageMessage(event, course.id)
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [course.id])
@@ -40,7 +41,6 @@ function Course({ course, onBack, onProgressUpdate }) {
       result = await window.sensei.storage.get(key, courseId)
     } else if (type === 'sensei-storage-set') {
       result = await window.sensei.storage.set(key, value, courseId)
-      // Aggiorna i progressi nella dashboard dopo ogni salvataggio
       if (onProgressUpdate) onProgressUpdate()
     } else if (type === 'sensei-storage-delete') {
       result = await window.sensei.storage.delete(key, courseId)
@@ -53,6 +53,65 @@ function Course({ course, onBack, onProgressUpdate }) {
     }
   }
 
+  // Trasforma il codice JSX del corso per renderlo compatibile con l'iframe
+  const transformCode = (code) => {
+    // Tiene traccia di quali builtin sono stati usati come icone Lucide
+    const builtinsUsedAsIcons = new Set()
+
+    let transformed = code
+      // Rimuove import React — già disponibile globalmente
+      .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
+      // Rimuove import di hook React — già destrutturati globalmente
+      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
+        imports.split(',').map(i => {
+          const name = i.trim().split(' as ').pop().trim()
+          return `// ${name} already global`
+        }).join('\n')
+      )
+      // Rimuove import react-dom — già disponibile globalmente
+      .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
+      // Converte import lucide-react in riferimenti al bundle locale
+      // Gestisce anche icone che collidono con built-in JS (es. Map, Set)
+      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
+        imports.split(',').map(i => {
+          const parts = i.trim().split(' as ')
+          const original = parts[0].trim()
+          const alias = parts[parts.length - 1].trim()
+
+          if (JS_BUILTINS.includes(alias)) {
+            // Segna questo builtin come usato come icona — va rinominato nel codice
+            builtinsUsedAsIcons.add(alias)
+            const safeName = `_${alias}Icon`
+            // Dichiara solo il safe name — l'alias originale NON viene ridichiarato
+            // per non sovrascrivere il builtin JS
+            return `const ${safeName} = _lucide['${original}'] || (() => null)`
+          }
+
+          return `const ${alias} = _lucide['${original}'] || (() => null)`
+        }).join('\n')
+      )
+      // Rimuove tutti gli altri import rimasti
+      .replace(/^import\s+.*$/gm, '// import removed')
+      // Sostituisce export default con variabile locale
+      .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
+
+    // Rinomina tutti gli usi degli alias builtin nel resto del codice
+    // sostituisce riferimenti JSX e come valore di proprietà
+    builtinsUsedAsIcons.forEach(name => {
+      const safeName = `_${name}Icon`
+      // <Map ... /> → <_MapIcon ... />
+      transformed = transformed.replace(new RegExp(`<${name}(\\s|/|>)`, 'g'), `<${safeName}$1`)
+      // </Map> → </_MapIcon>
+      transformed = transformed.replace(new RegExp(`</${name}>`, 'g'), `</${safeName}>`)
+      // icon: Map, → icon: _MapIcon,
+      transformed = transformed.replace(new RegExp(`:\\s*${name}([,}\\s\\n])`, 'g'), `: ${safeName}$1`)
+      // icon={Map} → icon={_MapIcon}
+      transformed = transformed.replace(new RegExp(`=\\{${name}\\}`, 'g'), `={${safeName}}`)
+    })
+
+    return transformed
+  }
+
   const generateHTML = (code, lucide) => {
     return `<!DOCTYPE html>
 <html>
@@ -63,12 +122,21 @@ function Course({ course, onBack, onProgressUpdate }) {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
   </style>
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 
-  <!-- Destruttura hooks e rendi React disponibile globalmente per lucide -->
+  <!-- STEP 1: Salva Map/Set nativi prima di qualsiasi script esterno -->
+  <script>
+    const __nativeMap = window.Map
+    const __nativeSet = window.Set
+  </script>
+
+  <!-- STEP 2: Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- STEP 3: React e ReactDOM -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+  <!-- STEP 4: Destruttura hooks React globalmente -->
   <script>
     window.React = React
     window.react = React
@@ -79,19 +147,20 @@ function Course({ course, onBack, onProgressUpdate }) {
     } = React
   </script>
 
-  <!-- lucide-react bundle locale — dopo React -->
+  <!-- STEP 5: Bundle lucide-react locale — dopo React -->
   <script>${lucide || ''}</script>
 
-  <!-- Assegna le icone subito dopo il bundle -->
+  <!-- STEP 6: Espone le icone Lucide come _lucideReact -->
   <script>
     window._lucideReact = window.LucideReact || {}
     console.log('lucide loaded:', Object.keys(window._lucideReact).length, 'icons')
   </script>
 
+  <!-- STEP 7: Babel per transpilare JSX -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
+  <!-- STEP 8: Storage bridge — comunica con Sensei via postMessage -->
   <script>
-    // Storage bridge
     let msgId = 0
     const pending = {}
 
@@ -122,27 +191,15 @@ function Course({ course, onBack, onProgressUpdate }) {
 <body>
   <div id="root"></div>
 
+  <!-- STEP 9: Esegue il codice del corso transpilato da Babel -->
   <script type="text/babel" data-presets="react">
+    // Ripristina Map/Set nativi nel contesto Babel
+    window.Map = __nativeMap
+    window.Set = __nativeSet
+
     const _lucide = window._lucideReact || {}
 
-    ${code
-      .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
-      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
-        imports.split(',').map(i => {
-          const name = i.trim().split(' as ').pop().trim()
-          return `// ${name} already global`
-        }).join('\n')
-      )
-      .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
-      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
-        imports.split(',').map(i => {
-          const name = i.trim().split(' as ').pop().trim()
-          return `const ${name} = _lucide['${name}'] || (() => null)`
-        }).join('\n')
-      )
-      .replace(/^import\s+.*$/gm, '// import removed')
-      .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
-    }
+    ${transformCode(code)}
 
     const root = ReactDOM.createRoot(document.getElementById('root'))
     root.render(React.createElement(__MainComponent))
@@ -152,8 +209,9 @@ function Course({ course, onBack, onProgressUpdate }) {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
+      {/* ── TOOLBAR CORSO ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '0 20px', height: 52,
@@ -185,6 +243,7 @@ function Course({ course, onBack, onProgressUpdate }) {
         </div>
       </div>
 
+      {/* ── CONTENUTO CORSO ── */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {error && (
           <div style={{ padding: 32, color: '#E24B4A', fontSize: 13, textAlign: 'center' }}>
