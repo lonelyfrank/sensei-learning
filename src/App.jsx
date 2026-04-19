@@ -6,14 +6,14 @@ import Settings from './pages/Settings.jsx'
 import IconPicker from './components/IconPicker.jsx'
 import TitleBar from './components/TitleBar.jsx'
 import Progress from './pages/Progress.jsx'
+import CreateHub from './pages/CreateHub.jsx'
+import Create from './pages/Create.jsx'
 
-// Colori assegnati ai corsi in sequenza
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
   '#D4537E', '#BA7517', '#639922', '#E24B4A',
 ]
 
-// Converte il filename in nome leggibile: os-journey → Os Journey
 function formatCourseName(id) {
   return id
     .replace(/-/g, ' ')
@@ -24,6 +24,7 @@ function formatCourseName(id) {
 function App() {
   const [collapsed, setCollapsed] = useState(false)
   const [currentView, setCurrentView] = useState('home')
+  const [currentCreateMode, setCurrentCreateMode] = useState(null)
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [courses, setCourses] = useState([])
   const [user, setUser] = useState({ name: 'Utente', avatar: null })
@@ -61,6 +62,7 @@ function App() {
   const handleNavigate = (view, course = null) => {
     setCurrentView(view)
     setSelectedCourse(course)
+    setCurrentCreateMode(null)
   }
 
   const handleImport = async () => {
@@ -87,13 +89,10 @@ function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
-      {/* ── TITLEBAR CUSTOM — draggable, contiene logo e controlli finestra ── */}
       <TitleBar />
 
-      {/* ── LAYOUT PRINCIPALE — sidebar + area contenuto ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* ── SIDEBAR ── */}
         <Sidebar
           collapsed={collapsed}
           onCollapse={() => setCollapsed(true)}
@@ -106,29 +105,14 @@ function App() {
           onOpenProgress={() => handleNavigate('progress')}
         />
 
-        {/* ── AREA PRINCIPALE ── */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-          {/* Topbar — visibile solo quando la sidebar è chiusa */}
+          {/* Topbar quando sidebar chiusa */}
           {collapsed && (
-            <div style={{
-              height: 48,
-              display: 'flex', alignItems: 'center',
-              padding: '0 16px',
-              borderBottom: '0.5px solid var(--border)',
-              flexShrink: 0,
-            }}>
+            <div style={{ height: 48, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: '0.5px solid var(--border)', flexShrink: 0 }}>
               <button
                 onClick={() => setCollapsed(false)}
-                title="Apri barra laterale"
-                style={{
-                  width: 28, height: 28,
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--text-secondary)',
-                  background: 'var(--bg-secondary)',
-                  border: '0.5px solid var(--border)',
-                }}
+                style={{ width: 28, height: 28, borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               >
@@ -174,10 +158,25 @@ function App() {
             />
           )}
 
+          {/* ── CREATE HUB — landing page modalità creazione ── */}
+          {currentView === 'create' && !currentCreateMode && (
+            <CreateHub
+              onBack={() => handleNavigate('home')}
+              onSelectMode={mode => setCurrentCreateMode(mode)}
+              onImport={handleImport}
+            />
+          )}
+
+          {/* ── CREATE AI — generatore prompt ── */}
+          {currentView === 'create' && currentCreateMode === 'ai' && (
+            <Create
+              onBack={() => setCurrentCreateMode(null)}
+            />
+          )}
+
         </div>
       </div>
 
-      {/* ── DIALOG IMPORTAZIONE CORSO ── */}
       {importDialog && (
         <ImportDialog
           suggestedName={importDialog.suggestedName}
@@ -193,85 +192,38 @@ function App() {
   )
 }
 
-/* Dialog modale per personalizzare nome, icona e colore del corso */
 function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel }) {
   const [name, setName] = useState(suggestedName)
   const [icon, setIcon] = useState(defaultIcon)
   const [color, setColor] = useState(defaultColor)
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 100,
-    }}>
-      <div style={{
-        background: 'var(--bg-primary)',
-        border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: 24, width: 420,
-        maxHeight: '85vh', overflowY: 'auto',
-      }}>
-        <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 6, color: 'var(--text-primary)' }}>
-          Importa corso
-        </h2>
-        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 20 }}>
-          Personalizza il corso prima di importarlo.
-        </p>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, width: 420, maxHeight: '85vh', overflowY: 'auto' }}>
+        <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 6, color: 'var(--text-primary)' }}>Importa corso</h2>
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 20 }}>Personalizza il corso prima di importarlo.</p>
 
-        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-          Nome corso
-        </label>
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nome corso</label>
         <input
           value={name}
           onChange={e => setName(e.target.value)}
           autoFocus
           onKeyDown={e => { if (e.key === 'Enter') onConfirm(filePath, name, icon, color) }}
-          style={{
-            width: '100%', padding: '8px 12px', fontSize: 13,
-            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
-            border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
-            outline: 'none', marginBottom: 20,
-          }}
+          style={{ width: '100%', padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none', marginBottom: 20 }}
         />
 
-        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>
-          Icona e colore
-        </label>
-        <IconPicker
-          selectedIcon={icon}
-          selectedColor={color}
-          onSelectIcon={setIcon}
-          onSelectColor={setColor}
-        />
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>Icona e colore</label>
+        <IconPicker selectedIcon={icon} selectedColor={color} onSelectIcon={setIcon} onSelectColor={setColor} />
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: '7px 16px', fontSize: 13,
-              color: 'var(--text-secondary)',
-              border: '0.5px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
-            }}
+          <button onClick={onCancel} style={{ padding: '7px 16px', fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            Annulla
-          </button>
-          <button
-            onClick={() => onConfirm(filePath, name, icon, color)}
-            style={{
-              padding: '7px 16px', fontSize: 13, color: '#fff',
-              background: color, border: 'none',
-              borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s',
-            }}
+          >Annulla</button>
+          <button onClick={() => onConfirm(filePath, name, icon, color)} style={{ padding: '7px 16px', fontSize: 13, color: '#fff', background: color, border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            Importa
-          </button>
+          >Importa</button>
         </div>
       </div>
     </div>

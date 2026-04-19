@@ -58,7 +58,7 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
       <div style={{ padding: '12px 8px 8px', flexShrink: 0 }}>
         <NavItem icon={<GridIcon />} label="I miei corsi" active={currentView === 'home'} onClick={() => onNavigate('home')} />
         <NavItem icon={<PlusIcon />} label="Importa corso" onClick={onImport} />
-        <NavItem icon={<CreateIcon />} label="Crea" onClick={() => {}} />
+        <NavItem icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
         <NavItem icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
       </div>
 

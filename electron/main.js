@@ -123,26 +123,43 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
       updated_at = excluded.updated_at
   `).run(courseId, key, value)
 
-  try {
-    const parsed = JSON.parse(value)
-    const upsert = db.prepare(`
-      INSERT INTO progress (course_id, day_id, completed, completed_at)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(course_id, day_id) DO UPDATE SET
-        completed = excluded.completed,
-        completed_at = excluded.completed_at
-    `)
-    if (key === 'completed' && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      for (const [dayId, completed] of Object.entries(parsed)) {
-        upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
-      }
+  // Sincronizza i progressi in base al contenuto salvato
+try {
+  const parsed = JSON.parse(value)
+
+  const upsert = db.prepare(`
+    INSERT INTO progress (course_id, day_id, completed, completed_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(course_id, day_id) DO UPDATE SET
+      completed = excluded.completed,
+      completed_at = excluded.completed_at
+  `)
+
+  // Funzione helper per sincronizzare un oggetto { "1": true, "2": false, ... }
+  const syncCompletedObject = (obj) => {
+    if (typeof obj !== 'object' || Array.isArray(obj)) return false
+    const entries = Object.entries(obj)
+    // Verifica che sia un oggetto con chiavi numeriche e valori booleani
+    const isCompletedMap = entries.length > 0 && entries.every(([k, v]) =>
+      !isNaN(parseInt(k)) && typeof v === 'boolean'
+    )
+    if (!isCompletedMap) return false
+    for (const [dayId, completed] of entries) {
+      upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
     }
-    if (parsed?.completed && typeof parsed.completed === 'object') {
-      for (const [dayId, completed] of Object.entries(parsed.completed)) {
-        upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
-      }
-    }
-  } catch (e) {}
+    return true
+  }
+
+  // Prova direttamente il valore (es. key='completed' o key='python_ml_completed')
+  if (syncCompletedObject(parsed)) {
+    // sincronizzato
+  }
+  // Prova dentro una proprietà 'completed' (es. unity-progress)
+  else if (parsed?.completed) {
+    syncCompletedObject(parsed.completed)
+  }
+
+} catch (e) {}
 
   return { key, value }
 })
