@@ -67,6 +67,20 @@ ipcMain.handle('get-courses', () => {
   return db.prepare('SELECT * FROM courses ORDER BY added_at DESC').all()
 })
 
+// Legge il contenuto raw di un file corso
+ipcMain.handle('read-course-file', (event, filename) => {
+  const filePath = path.join(app.getAppPath(), 'courses', filename)
+  if (!fs.existsSync(filePath)) return null
+  return fs.readFileSync(filePath, 'utf-8')
+})
+
+// Serve il bundle UMD di lucide-react locale
+ipcMain.handle('get-lucide-bundle', () => {
+  const filePath = path.join(app.getAppPath(), 'node_modules/lucide-react/dist/umd/lucide-react.min.js')
+  if (!fs.existsSync(filePath)) return null
+  return fs.readFileSync(filePath, 'utf-8')
+})
+
 // Salva o aggiorna il progresso di un giorno
 ipcMain.handle('save-progress', (event, courseId, dayId, completed) => {
   const stmt = db.prepare(`

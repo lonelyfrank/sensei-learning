@@ -13,6 +13,12 @@ contextBridge.exposeInMainWorld('sensei', {
   // Legge tutti i corsi registrati nel database
   getCourses: () => ipcRenderer.invoke('get-courses'),
 
+  // Legge il contenuto raw del file JSX del corso
+  readCourseFile: (filename) => ipcRenderer.invoke('read-course-file', filename),
+  
+  // Serve il bundle UMD di lucide-react locale
+  getLucideBundle: () => ipcRenderer.invoke('get-lucide-bundle'),
+
   // Salva o aggiorna il progresso di un giorno
   saveProgress: (courseId, dayId, completed) =>
     ipcRenderer.invoke('save-progress', courseId, dayId, completed),
@@ -27,10 +33,10 @@ contextBridge.exposeInMainWorld('sensei', {
 
   // Storage API per i corsi — sostituisce window.storage degli artifact Claude
   storage: {
-    get: (key) => ipcRenderer.invoke('storage-get', window.__currentCourseId, key),
-    set: (key, value) => ipcRenderer.invoke('storage-set', window.__currentCourseId, key, value),
-    delete: (key) => ipcRenderer.invoke('storage-delete', window.__currentCourseId, key),
-    list: (prefix) => ipcRenderer.invoke('storage-list', window.__currentCourseId, prefix),
+    get: (key, courseId) => ipcRenderer.invoke('storage-get', courseId, key),
+    set: (key, value, courseId) => ipcRenderer.invoke('storage-set', courseId, key, value),
+    delete: (key, courseId) => ipcRenderer.invoke('storage-delete', courseId, key),
+    list: (prefix, courseId) => ipcRenderer.invoke('storage-list', courseId, prefix),
   },
 
   // Profilo utente
