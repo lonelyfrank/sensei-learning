@@ -90,6 +90,66 @@
   --border-hover: rgba(244, 63, 94, 0.2);
 }
 
+/* Nord — grigio-blu freddo */
+.theme-nord {
+  --bg-primary: #2e3440;
+  --bg-secondary: #3b4252;
+  --bg-tertiary: #434c5e;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-tertiary: #81a1c1;
+  --border: rgba(236, 239, 244, 0.08);
+  --border-hover: rgba(236, 239, 244, 0.15);
+}
+
+/* Obsidian — nero puro con accenti indaco */
+.theme-obsidian {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-tertiary: #1a1a25;
+  --text-primary: #c9c9e0;
+  --text-secondary: #7878a0;
+  --text-tertiary: #4a4a6a;
+  --border: rgba(100, 100, 180, 0.1);
+  --border-hover: rgba(100, 100, 180, 0.2);
+}
+
+/* Ocean — blu profondo con accenti ciano */
+.theme-ocean {
+  --bg-primary: #0a1628;
+  --bg-secondary: #0d1f3c;
+  --bg-tertiary: #112a50;
+  --text-primary: #cce5ff;
+  --text-secondary: #7ab3e0;
+  --text-tertiary: #3d7ab5;
+  --border: rgba(100, 180, 255, 0.1);
+  --border-hover: rgba(100, 180, 255, 0.2);
+}
+
+/* Paper — bianco caldo stile carta */
+.theme-paper {
+  --bg-primary: #f5f0e8;
+  --bg-secondary: #ede8df;
+  --bg-tertiary: #e0d8cc;
+  --text-primary: #2c2416;
+  --text-secondary: #6b5c45;
+  --text-tertiary: #a08060;
+  --border: rgba(44, 36, 22, 0.1);
+  --border-hover: rgba(44, 36, 22, 0.18);
+}
+
+/* Sakura — rosa tenue stile giapponese */
+.theme-sakura {
+  --bg-primary: #fff0f5;
+  --bg-secondary: #ffe4ef;
+  --bg-tertiary: #ffd6e7;
+  --text-primary: #4a1228;
+  --text-secondary: #8b3a5a;
+  --text-tertiary: #c47090;
+  --border: rgba(74, 18, 40, 0.1);
+  --border-hover: rgba(74, 18, 40, 0.18);
+}
+
 /* ── BASE ── */
 
 html, body, #root {
