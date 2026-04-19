@@ -5,7 +5,7 @@
   padding: 0;
 }
 
-/* Variabili di design Sensei */
+/* Variabili strutturali — invarianti tra i temi */
 :root {
   --sidebar-width: 220px;
   --titlebar-height: 40px;
@@ -13,8 +13,25 @@
   --radius-md: 8px;
   --radius-lg: 12px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
 
-  /* Colori light mode */
+/* ── TEMI ── */
+
+/* Dark (default) */
+:root,
+.theme-dark {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #242424;
+  --bg-tertiary: #2e2e2e;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #666666;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
+}
+
+/* Light */
+.theme-light {
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f4;
   --bg-tertiary: #eeece9;
@@ -25,19 +42,55 @@
   --border-hover: rgba(0, 0, 0, 0.15);
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #242424;
-    --bg-tertiary: #2e2e2e;
-    --text-primary: #f0f0f0;
-    --text-secondary: #a0a0a0;
-    --text-tertiary: #666666;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-hover: rgba(255, 255, 255, 0.15);
-  }
+/* Midnight — blu notte profondo */
+.theme-midnight {
+  --bg-primary: #0a0f1e;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2338;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #475569;
+  --border: rgba(99, 179, 237, 0.1);
+  --border-hover: rgba(99, 179, 237, 0.2);
 }
+
+/* Forest — verde scuro */
+.theme-forest {
+  --bg-primary: #0d1a12;
+  --bg-secondary: #132019;
+  --bg-tertiary: #1a2e22;
+  --text-primary: #d4edda;
+  --text-secondary: #86b094;
+  --text-tertiary: #4a7a58;
+  --border: rgba(72, 187, 120, 0.1);
+  --border-hover: rgba(72, 187, 120, 0.2);
+}
+
+/* Amber — caldo scuro */
+.theme-amber {
+  --bg-primary: #1a1200;
+  --bg-secondary: #241a00;
+  --bg-tertiary: #2e2200;
+  --text-primary: #fef3c7;
+  --text-secondary: #d97706;
+  --text-tertiary: #92400e;
+  --border: rgba(245, 158, 11, 0.1);
+  --border-hover: rgba(245, 158, 11, 0.2);
+}
+
+/* Rose — chiaro rosato */
+.theme-rose {
+  --bg-primary: #fff5f7;
+  --bg-secondary: #ffe4e8;
+  --bg-tertiary: #fecdd3;
+  --text-primary: #1a0a0e;
+  --text-secondary: #9f1239;
+  --text-tertiary: #be185d;
+  --border: rgba(244, 63, 94, 0.1);
+  --border-hover: rgba(244, 63, 94, 0.2);
+}
+
+/* ── BASE ── */
 
 html, body, #root {
   height: 100%;
