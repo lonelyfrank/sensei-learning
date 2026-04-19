@@ -16,6 +16,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     filename TEXT NOT NULL,
+    total_days INTEGER DEFAULT 0,
     added_at INTEGER DEFAULT (strftime('%s', 'now'))
   );
 

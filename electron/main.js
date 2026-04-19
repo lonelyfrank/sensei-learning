@@ -49,17 +49,20 @@ ipcMain.handle('import-course', async (event, filePath) => {
   const courseId = filename.replace('.jsx', '')
   const destPath = path.join(app.getAppPath(), 'courses', filename)
 
-  // Copia il file nella cartella courses
   fs.copyFileSync(filePath, destPath)
 
-  // Registra il corso nel database
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO courses (id, name, filename)
-    VALUES (?, ?, ?)
-  `)
-  stmt.run(courseId, courseId, filename)
+  // Estrae il numero totale di giorni dal file JSX
+  const code = fs.readFileSync(filePath, 'utf-8')
+  const dayNums = [...code.matchAll(/\{\s*day\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
+  const totalDays = dayNums.length > 0 ? Math.max(...dayNums) : 30
 
-  return { success: true, courseId }
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO courses (id, name, filename, total_days)
+    VALUES (?, ?, ?, ?)
+  `)
+  stmt.run(courseId, courseId, filename, totalDays)
+
+  return { success: true, courseId, totalDays }
 })
 
 // Legge tutti i corsi registrati nel database
@@ -137,8 +140,9 @@ ipcMain.handle('storage-get', (event, courseId, key) => {
   return row ? { key, value: row.value } : null
 })
 
-// Scrive un valore nello storage del corso
+// Scrive un valore nello storage del corso e sincronizza i progressi
 ipcMain.handle('storage-set', (event, courseId, key, value) => {
+  // Salva nello storage
   db.prepare(`
     INSERT INTO course_storage (course_id, key, value, updated_at)
     VALUES (?, ?, ?, strftime('%s', 'now'))
@@ -146,6 +150,35 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
       value = excluded.value,
       updated_at = excluded.updated_at
   `).run(courseId, key, value)
+
+  // Sincronizza i progressi in base al contenuto salvato
+  try {
+    const parsed = JSON.parse(value)
+    const upsert = db.prepare(`
+      INSERT INTO progress (course_id, day_id, completed, completed_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(course_id, day_id) DO UPDATE SET
+        completed = excluded.completed,
+        completed_at = excluded.completed_at
+    `)
+
+    // Formato os-journey: key='completed', value={ "1": true, "2": false, ... }
+    if (key === 'completed' && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      for (const [dayId, completed] of Object.entries(parsed)) {
+        upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
+      }
+    }
+
+    // Formato unity: key='unity-progress', value={ completed: { "1": true, ... }, currentDay: 2 }
+    if (parsed?.completed && typeof parsed.completed === 'object') {
+      for (const [dayId, completed] of Object.entries(parsed.completed)) {
+        upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
+      }
+    }
+  } catch (e) {
+    // Il valore non è JSON o non ha progressi — ignora
+  }
+
   return { key, value }
 })
 

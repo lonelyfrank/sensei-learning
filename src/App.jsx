@@ -27,21 +27,21 @@ function App() {
   }
 
   const loadCourses = async () => {
-    const result = await window.sensei.getCourses()
-    const coursesWithProgress = await Promise.all(
-      result.map(async (course, index) => {
-        const progress = await window.sensei.getProgress(course.id)
-        const completed = progress.filter(p => p.completed).length
-        const total = progress.length || 1
-        return {
-          ...course,
-          color: COURSE_COLORS[index % COURSE_COLORS.length],
-          progress: Math.round((completed / total) * 100),
-          completedDays: completed,
-          totalDays: total,
-        }
-      })
-    )
+   const result = await window.sensei.getCourses()
+   const coursesWithProgress = await Promise.all(
+    result.map(async (course, index) => {
+      const progress = await window.sensei.getProgress(course.id)
+      const completed = progress.filter(p => p.completed).length
+      const total = course.total_days || 1
+      return {
+        ...course,
+        color: COURSE_COLORS[index % COURSE_COLORS.length],
+        progress: total > 0 ? Math.round((completed / total) * 100) : 0,
+        completedDays: completed,
+        totalDays: total,
+      }
+    })
+  )
     setCourses(coursesWithProgress)
   }
 

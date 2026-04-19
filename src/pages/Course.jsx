@@ -40,6 +40,8 @@ function Course({ course, onBack, onProgressUpdate }) {
       result = await window.sensei.storage.get(key, courseId)
     } else if (type === 'sensei-storage-set') {
       result = await window.sensei.storage.set(key, value, courseId)
+      // Aggiorna i progressi nella dashboard dopo ogni salvataggio
+      if (onProgressUpdate) onProgressUpdate()
     } else if (type === 'sensei-storage-delete') {
       result = await window.sensei.storage.delete(key, courseId)
     } else if (type === 'sensei-storage-list') {
