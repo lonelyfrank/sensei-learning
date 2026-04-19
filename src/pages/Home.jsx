@@ -42,6 +42,11 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
         </Section>
       )}
 
+      {/* Divisore tra "In corso" e "Tutti i corsi" */}
+      {inProgress.length > 0 && (
+        <div style={{ height: '0.5px', background: 'var(--border)', marginBottom: 28 }} />
+      )}
+
       {/* Tutti i corsi */}
       <Section
         title="Tutti i corsi"
