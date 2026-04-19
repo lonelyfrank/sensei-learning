@@ -44,23 +44,25 @@ ipcMain.handle('open-file-dialog', async () => {
 })
 
 // Copia il file scelto nella cartella /courses e lo registra nel database
-ipcMain.handle('import-course', async (event, filePath) => {
+ipcMain.handle('import-course', async (event, filePath, customName) => {
   const filename = path.basename(filePath)
   const courseId = filename.replace('.jsx', '')
   const destPath = path.join(app.getAppPath(), 'courses', filename)
 
   fs.copyFileSync(filePath, destPath)
 
-  // Estrae il numero totale di giorni dal file JSX
   const code = fs.readFileSync(filePath, 'utf-8')
   const dayNums = [...code.matchAll(/\{\s*day\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
   const totalDays = dayNums.length > 0 ? Math.max(...dayNums) : 30
+
+  // Usa il nome personalizzato se fornito, altrimenti usa l'ID
+  const name = customName || courseId
 
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO courses (id, name, filename, total_days)
     VALUES (?, ?, ?, ?)
   `)
-  stmt.run(courseId, courseId, filename, totalDays)
+  stmt.run(courseId, name, filename, totalDays)
 
   return { success: true, courseId, totalDays }
 })
