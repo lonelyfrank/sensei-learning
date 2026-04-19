@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 
 // Template del prompt base — invariabile
-const PROMPT_BASE = `Crea un corso interattivo in formato JSX per la piattaforma Sensei.
+const PROMPT_BASE = `Crea un sentiero interattivo in formato JSX per la piattaforma Sensei.
 
 ## Cos'è Sensei
-Sensei è un'app desktop Electron che carica ed esegue artifact JSX come corsi di apprendimento.
-I corsi girano in un iframe sandboxed con React 18, Lucide React e Tailwind CSS già disponibili.
+Sensei è un'app desktop Electron che carica ed esegue artifact JSX come sentieri di apprendimento.
+I sentieri girano in un iframe sandboxed con React 18, Lucide React e Tailwind CSS già disponibili.
 I progressi vengono salvati tramite window.storage, un'API asincrona key-value.
 
 ## Specifiche tecniche obbligatorie
@@ -35,7 +35,7 @@ import { NomeIcona } from 'lucide-react'
 
 **Export:**
 \`\`\`jsx
-export default function NomeCorso() { ... }
+export default function NomeSentiero() { ... }
 \`\`\`
 
 ## Struttura contenuto per ogni giorno
@@ -47,13 +47,13 @@ Ogni giorno deve avere almeno:
 - Checkpoint (come verificare di aver capito)
 
 ## Design
-Crea un design unico e originale adatto all'argomento del corso.
+Crea un design unico e originale adatto all'argomento del sentiero.
 Usa colori, tipografia e layout che riflettano la natura del contenuto.
-Il corso deve essere visivamente distinto dagli altri.
+Il sentiero deve essere visivamente distinto dagli altri.
 Deve funzionare sia in dark che in light mode oppure avere un tema fisso coerente.
 
 ## Navigazione
-Il corso deve permettere di navigare tra i giorni e tornare a una vista panoramica.
+Il sentiero deve permettere di navigare tra i giorni e tornare a una vista panoramica.
 Ogni giorno deve avere un bottone per segnarlo come completato.`
 
 const LEVELS = ['Principiante', 'Intermedio', 'Avanzato']
@@ -72,7 +72,7 @@ function Create({ onBack }) {
 
   // Genera la sezione personale dal form
   const generateUserSection = () => {
-    return `## Il corso da creare
+    return `## Il sentiero da creare
 
 **Argomento:** ${form.topic}
 **Numero di giorni:** ${form.days}
@@ -117,7 +117,7 @@ function Create({ onBack }) {
           Indietro
         </button>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Crea corso</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Crea sentiero</h1>
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>
             Genera un prompt ottimizzato da dare a Claude
           </p>
@@ -129,7 +129,7 @@ function Create({ onBack }) {
         <div>
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-              Argomento del corso *
+              Argomento del sentiero *
             </label>
             <input
               value={form.topic}
@@ -195,7 +195,7 @@ function Create({ onBack }) {
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Descrivi cosa vuoi imparare, il tuo background, gli obiettivi specifici del corso..."
+              placeholder="Descrivi cosa vuoi imparare, il tuo background, gli obiettivi specifici del sentiero..."
               rows={5}
               style={{
                 width: '100%', padding: '9px 12px', fontSize: 13,
@@ -265,7 +265,7 @@ function Create({ onBack }) {
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-                Il tuo corso
+                Il tuo sentiero
               </span>
               <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 8 }}>
                 — puoi modificare
@@ -319,7 +319,7 @@ function Create({ onBack }) {
 
           <p style={{ marginTop: 16, fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: 1.6 }}>
             Incolla il prompt in Claude, ricevi il file JSX generato,<br/>
-            salvalo e importalo in Sensei con "Importa corso".
+            salvalo e importalo in Sensei con "Importa".
           </p>
         </div>
       )}

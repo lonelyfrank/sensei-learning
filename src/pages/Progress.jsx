@@ -9,7 +9,7 @@ function Progress({ onBack, courses }) {
   }, [])
 
   const loadStats = async () => {
-    // Carica i progressi di tutti i corsi
+    // Carica i progressi di tutti i sentieri
     const allProgress = await Promise.all(
       courses.map(async course => {
         const progress = await window.sensei.getProgress(course.id)
@@ -21,10 +21,10 @@ function Progress({ onBack, courses }) {
     const totalCompleted = allProgress.reduce((acc, { progress }) =>
       acc + progress.filter(p => p.completed).length, 0)
 
-    // Corsi attivi
+    // Sentieri attivi
     const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100)
 
-    // Corsi completati
+    // Sentieri completati
     const completedCourses = courses.filter(c => c.progress === 100)
 
     // Ultimo accesso — il timestamp più recente tra tutti i progressi
@@ -84,8 +84,8 @@ function Progress({ onBack, courses }) {
           {/* ── STATS CARDS ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 32 }}>
             <StatCard label="Giorni completati" value={stats.totalCompleted} color="#378ADD" />
-            <StatCard label="Corsi attivi" value={stats.activeCourses} color="#7F77DD" />
-            <StatCard label="Corsi completati" value={stats.completedCourses} color="#1D9E75" />
+            <StatCard label="Sentieri attivi" value={stats.activeCourses} color="#7F77DD" />
+            <StatCard label="Sentieri completati" value={stats.completedCourses} color="#1D9E75" />
             <StatCard label="Streak attuale" value={`${stats.streak}gg`} color="#D85A30" />
           </div>
 
@@ -97,10 +97,10 @@ function Progress({ onBack, courses }) {
             <ActivityGraph activity={stats.activity} />
           </div>
 
-          {/* ── PROGRESSI PER CORSO ── */}
+          {/* ── PROGRESSI PER SENTIERO ── */}
           <div>
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Per corso
+              Per sentiero
             </span>
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {stats.allProgress.map(({ course, progress }) => {

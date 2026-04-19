@@ -56,8 +56,8 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
 
       {/* ── NAV PRINCIPALE ── */}
       <div style={{ padding: '12px 8px 8px', flexShrink: 0 }}>
-        <NavItem icon={<GridIcon />} label="I miei corsi" active={currentView === 'home'} onClick={() => onNavigate('home')} />
-        <NavItem icon={<PlusIcon />} label="Importa corso" onClick={onImport} />
+        <NavItem icon={<GridIcon />} label="I miei sentieri" active={currentView === 'home'} onClick={() => onNavigate('home')} />
+        <NavItem icon={<PlusIcon />} label="Importa" onClick={onImport} />
         <NavItem icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
         <NavItem icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
       </div>
@@ -69,7 +69,7 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
 
       <div style={{ padding: '0 8px', flex: 1, overflowY: 'auto' }}>
         {activeCourses.length === 0 && (
-          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun corso attivo</p>
+          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
         )}
         {activeCourses.map(course => {
           const Icon = course.icon ? ICONS[course.icon] : null
@@ -119,7 +119,7 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Utente'}</p>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>{activeCourses.length} corsi attivi</p>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>{activeCourses.length} sentieri attivi</p>
           </div>
         </div>
       </div>

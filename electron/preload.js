@@ -13,13 +13,13 @@ contextBridge.exposeInMainWorld('sensei', {
   // Apre il dialog di sistema per scegliere un file .jsx
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
 
-  // Importa un corso copiandolo nella cartella /courses e registrandolo nel db
+  // Importa un sentiero copiandolo nella cartella /courses e registrandolo nel db
   importCourse: (filePath, name, icon, color) => ipcRenderer.invoke('import-course', filePath, name, icon, color),
 
-  // Legge tutti i corsi registrati nel database
+  // Legge tutti i sentieri registrati nel database
   getCourses: () => ipcRenderer.invoke('get-courses'),
 
-  // Legge il contenuto raw del file JSX del corso
+  // Legge il contenuto raw del file JSX del sentiero
   readCourseFile: (filename) => ipcRenderer.invoke('read-course-file', filename),
   
   // Serve il bundle UMD di lucide-react locale
@@ -29,15 +29,15 @@ contextBridge.exposeInMainWorld('sensei', {
   saveProgress: (courseId, dayId, completed) =>
     ipcRenderer.invoke('save-progress', courseId, dayId, completed),
 
-  // Legge tutti i progressi di un corso
+  // Legge tutti i progressi di un sentiero
   getProgress: (courseId) =>
     ipcRenderer.invoke('get-progress', courseId),
 
-  // Rimuove un corso dal database e dal filesystem
+  // Rimuove un sentiero dal database e dal filesystem
   removeCourse: (courseId, filename) =>
     ipcRenderer.invoke('remove-course', courseId, filename),
 
-  // Storage API per i corsi — sostituisce window.storage degli artifact Claude
+  // Storage API per i sentieri — sostituisce window.storage degli artifact Claude
   storage: {
     get: (key, courseId) => ipcRenderer.invoke('storage-get', courseId, key),
     set: (key, value, courseId) => ipcRenderer.invoke('storage-set', courseId, key, value),

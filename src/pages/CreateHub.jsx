@@ -5,7 +5,7 @@ const MODES_AVAILABLE = [
     id: 'ai',
     icon: '✦',
     title: 'Crea con AI',
-    description: 'Genera un prompt ottimizzato per Claude e ottieni il tuo corso personalizzato in pochi minuti.',
+    description: 'Genera un prompt ottimizzato per Claude e ottieni il tuo sentiero personalizzato in pochi minuti.',
     color: '#378ADD',
   },
 ]
@@ -22,7 +22,7 @@ const MODES_SOON = [
     id: 'editor',
     icon: '✎',
     title: 'Editor visuale',
-    description: 'Crea il tuo corso direttamente nell\'app con un editor drag & drop.',
+    description: 'Crea il tuo sentiero direttamente nell\'app con un editor drag & drop.',
     color: '#D85A30',
   },
 ]
@@ -52,7 +52,7 @@ function CreateHub({ onBack, onSelectMode }) {
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Crea</h1>
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>
-            Scegli come vuoi creare il tuo corso
+            Scegli come vuoi creare il tuo sentiero
           </p>
         </div>
       </div>

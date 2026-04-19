@@ -24,7 +24,7 @@ function Course({ course, onBack, onProgressUpdate }) {
         window.sensei.readCourseFile(course.filename),
         window.sensei.getLucideBundle(),
       ])
-      if (!code) throw new Error('File corso non trovato')
+      if (!code) throw new Error('File sentiero non trovato')
       setCourseCode(code)
       setLucideBundle(lucide)
     } catch (err) {
@@ -53,7 +53,7 @@ function Course({ course, onBack, onProgressUpdate }) {
     }
   }
 
-  // Trasforma il codice JSX del corso per renderlo compatibile con l'iframe
+  // Trasforma il codice JSX del sentiero per renderlo compatibile con l'iframe
   const transformCode = (code) => {
     // Tiene traccia di quali builtin sono stati usati come icone Lucide
     const builtinsUsedAsIcons = new Set()
@@ -191,7 +191,7 @@ function Course({ course, onBack, onProgressUpdate }) {
 <body>
   <div id="root"></div>
 
-  <!-- STEP 9: Esegue il codice del corso transpilato da Babel -->
+  <!-- STEP 9: Esegue il codice del sentiero transpilato da Babel -->
   <script type="text/babel" data-presets="react">
     // Ripristina Map/Set nativi nel contesto Babel
     window.Map = __nativeMap
@@ -211,7 +211,7 @@ function Course({ course, onBack, onProgressUpdate }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* ── TOOLBAR CORSO ── */}
+      {/* ── TOOLBAR SENTIERO ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '0 20px', height: 52,
@@ -243,17 +243,17 @@ function Course({ course, onBack, onProgressUpdate }) {
         </div>
       </div>
 
-      {/* ── CONTENUTO CORSO ── */}
+      {/* ── CONTENUTO SENTIERO ── */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {error && (
           <div style={{ padding: 32, color: '#E24B4A', fontSize: 13, textAlign: 'center' }}>
-            <p>Errore nel caricamento del corso.</p>
+            <p>Errore nel caricamento del sentiero.</p>
             <p style={{ color: 'var(--text-tertiary)', marginTop: 8, fontSize: 12 }}>{error}</p>
           </div>
         )}
         {!error && (!courseCode || !lucideBundle) && (
           <div style={{ padding: 32, color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center' }}>
-            Caricamento corso...
+            Caricamento sentiero...
           </div>
         )}
         {!error && courseCode && lucideBundle && (

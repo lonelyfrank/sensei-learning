@@ -36,7 +36,7 @@ function createWindow() {
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Corsi Sensei', extensions: ['jsx'] }],
+    filters: [{ name: 'Sentieri Sensei', extensions: ['jsx'] }],
   })
   return result
 })
@@ -62,12 +62,12 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
   return { success: true, courseId, totalDays }
 })
 
-// Legge tutti i corsi registrati nel database
+// Legge tutti i sentieri registrati nel database
 ipcMain.handle('get-courses', () => {
   return db.prepare('SELECT * FROM courses ORDER BY added_at DESC').all()
 })
 
-// Legge il contenuto raw di un file corso
+// Legge il contenuto raw di un file sentiero
 ipcMain.handle('read-course-file', (event, filename) => {
   const filePath = path.join(app.getAppPath(), 'courses', filename)
   if (!fs.existsSync(filePath)) return null
@@ -93,12 +93,12 @@ ipcMain.handle('save-progress', (event, courseId, dayId, completed) => {
   return { success: true }
 })
 
-// Legge tutti i progressi di un corso
+// Legge tutti i progressi di un sentiero
 ipcMain.handle('get-progress', (event, courseId) => {
   return db.prepare('SELECT * FROM progress WHERE course_id = ?').all(courseId)
 })
 
-// Rimuove un corso dal database e cancella il file dalla cartella courses
+// Rimuove un sentiero dal database e cancella il file dalla cartella courses
 ipcMain.handle('remove-course', (event, courseId, filename) => {
   const filePath = path.join(app.getAppPath(), 'courses', filename)
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
@@ -107,13 +107,13 @@ ipcMain.handle('remove-course', (event, courseId, filename) => {
   return { success: true }
 })
 
-// Legge un valore dallo storage del corso
+// Legge un valore dallo storage del sentiero
 ipcMain.handle('storage-get', (event, courseId, key) => {
   const row = db.prepare('SELECT value FROM course_storage WHERE course_id = ? AND key = ?').get(courseId, key)
   return row ? { key, value: row.value } : null
 })
 
-// Scrive un valore nello storage del corso e sincronizza i progressi
+// Scrive un valore nello storage del sentiero e sincronizza i progressi
 ipcMain.handle('storage-set', (event, courseId, key, value) => {
   db.prepare(`
     INSERT INTO course_storage (course_id, key, value, updated_at)
@@ -164,13 +164,13 @@ try {
   return { key, value }
 })
 
-// Elimina un valore dallo storage del corso
+// Elimina un valore dallo storage del sentiero
 ipcMain.handle('storage-delete', (event, courseId, key) => {
   db.prepare('DELETE FROM course_storage WHERE course_id = ? AND key = ?').run(courseId, key)
   return { key, deleted: true }
 })
 
-// Lista tutte le chiavi dello storage del corso
+// Lista tutte le chiavi dello storage del sentiero
 ipcMain.handle('storage-list', (event, courseId, prefix) => {
   const rows = prefix
     ? db.prepare('SELECT key FROM course_storage WHERE course_id = ? AND key LIKE ?').all(courseId, `${prefix}%`)

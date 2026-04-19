@@ -13,7 +13,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Permette di importare i corsi con @courses/nomefile
+      // Permette di importare i sentieri con @courses/nomefile
       '@courses': path.resolve(__dirname, 'courses'),
     },
   },

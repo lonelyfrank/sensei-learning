@@ -24,7 +24,7 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>I miei corsi</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>I miei sentieri</h1>
         <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3 }}>
           <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
           <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
@@ -42,14 +42,14 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
         </Section>
       )}
 
-      {/* Divisore tra "In corso" e "Tutti i corsi" */}
+      {/* Divisore tra "In corso" e "Tutti i sentieri" */}
       {inProgress.length > 0 && (
         <div style={{ height: '0.5px', background: 'var(--border)', marginBottom: 28 }} />
       )}
 
-      {/* Tutti i corsi */}
+      {/* Tutti i sentieri */}
       <Section
-        title="Tutti i corsi"
+        title="Tutti i sentieri"
         action={
           <div style={{ display: 'flex', gap: 6 }}>
             {FILTERS.map(f => <FilterPill key={f} label={f} active={filter === f} onClick={() => setFilter(f)} />)}
@@ -78,9 +78,9 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
       {/* Stato vuoto */}
       {courses.length === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 12, color: 'var(--text-tertiary)' }}>
-          <p style={{ fontSize: 15 }}>Nessun corso caricato.</p>
+          <p style={{ fontSize: 15 }}>Nessun sentiero caricato.</p>
           <button onClick={onImport} style={{ fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px' }}>
-            + Importa il tuo primo corso
+            + Importa il tuo primo sentiero
           </button>
         </div>
       )}
@@ -118,7 +118,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove }) {
     return () => document.removeEventListener('mousedown', handle)
   }, [menuOpen])
 
-  // Renderizza icona corso — usa quella salvata o fallback SVG
+  // Renderizza icona sentiero — usa quella salvata o fallback SVG
   const CourseIconEl = () => {
     if (isCompleted) return <CheckIcon color="#1D9E75" />
     if (course.icon && ICONS[course.icon]) {
@@ -193,7 +193,7 @@ function ContextMenu({ visible, open, onToggle, onRemove, menuRef }) {
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <TrashIcon /> Elimina corso
+            <TrashIcon /> Elimina sentiero
           </button>
         </div>
       )}
@@ -207,7 +207,7 @@ function ImportCard({ view, onClick }) {
     return (
       <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '0.5px dashed var(--border)', cursor: 'pointer', opacity: hovered ? 0.8 : 0.5, transition: 'opacity 0.15s' }}>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>+ Importa corso</span>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>+ Importa sentiero</span>
       </div>
     )
   }
@@ -236,7 +236,7 @@ function ViewButton({ active, onClick, children }) {
   )
 }
 
-// Icona fallback quando il corso non ha un'icona personalizzata
+// Icona fallback quando il sentiero non ha un'icona personalizzata
 function CourseIconFallback({ color }) {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
