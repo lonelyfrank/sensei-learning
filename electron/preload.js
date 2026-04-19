@@ -4,6 +4,12 @@ const { contextBridge, ipcRenderer } = require('electron')
 // React le vedrà come window.sensei.nomeMetodo()
 // ipcRenderer invia messaggi al processo principale (main.js)
 contextBridge.exposeInMainWorld('sensei', {
+  // Controlli finestra
+  windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+  windowMaximize: () => ipcRenderer.invoke('window-maximize'),
+  windowClose: () => ipcRenderer.invoke('window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+
   // Apre il dialog di sistema per scegliere un file .jsx
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
 

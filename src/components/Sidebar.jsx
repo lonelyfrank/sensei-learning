@@ -18,7 +18,7 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
     <div style={{
       width: collapsed ? 0 : 'var(--sidebar-width)',
       minWidth: collapsed ? 0 : 'var(--sidebar-width)',
-      height: '100vh',
+      height: '100%',
       background: 'var(--bg-secondary)',
       borderRight: '0.5px solid var(--border)',
       display: 'flex', flexDirection: 'column',

@@ -4,9 +4,9 @@ import Home from './pages/Home.jsx'
 import Course from './pages/Course.jsx'
 import Settings from './pages/Settings.jsx'
 import IconPicker from './components/IconPicker.jsx'
-import * as LucideIcons from 'lucide-react'
+import TitleBar from './components/TitleBar.jsx'
 
-// Colori assegnati ai corsi in sequenza — si ripetono se ci sono più di 8 corsi
+// Colori assegnati ai corsi in sequenza
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
   '#D4537E', '#BA7517', '#639922', '#E24B4A',
@@ -47,7 +47,6 @@ function App() {
         const total = course.total_days || 1
         return {
           ...course,
-          // Usa il colore salvato nel db, altrimenti assegna dalla palette
           color: course.color || COURSE_COLORS[index % COURSE_COLORS.length],
           progress: total > 0 ? Math.round((completed / total) * 100) : 0,
           completedDays: completed,
@@ -70,15 +69,9 @@ function App() {
     const filename = filePath.split('/').pop()
     const courseId = filename.replace('.jsx', '')
     const suggestedName = formatCourseName(courseId)
-    setImportDialog({
-      filePath,
-      suggestedName,
-      icon: 'BookOpen',        // icona default
-      color: '#378ADD',        // colore default
-    })
+    setImportDialog({ filePath, suggestedName, icon: 'BookOpen', color: '#378ADD' })
   }
 
-  // Conferma importazione con nome, icona e colore scelti
   const handleImportConfirm = async (filePath, name, icon, color) => {
     await window.sensei.importCourse(filePath, name, icon, color)
     setImportDialog(null)
@@ -91,111 +84,117 @@ function App() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
-      {/* ── SIDEBAR ── */}
-      <Sidebar
-        collapsed={collapsed}
-        onCollapse={() => setCollapsed(true)}
-        onNavigate={handleNavigate}
-        currentView={currentView}
-        courses={courses}
-        onImport={handleImport}
-        user={user}
-        onOpenSettings={() => handleNavigate('settings')}
-        onOpenProgress={() => handleNavigate('progress')}
-      />
+      {/* ── TITLEBAR CUSTOM — draggable, contiene logo e controlli finestra ── */}
+      <TitleBar />
 
-      {/* ── AREA PRINCIPALE ── */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* ── LAYOUT PRINCIPALE — sidebar + area contenuto ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* Topbar — visibile solo quando la sidebar è chiusa */}
-        {collapsed && (
-          <div style={{
-            height: 52,
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 16px',
-            borderBottom: '0.5px solid var(--border)',
-            flexShrink: 0,
-          }}>
-            <button
-              onClick={() => setCollapsed(false)}
-              title="Apri barra laterale"
-              style={{
-                width: 28, height: 28,
-                borderRadius: 'var(--radius-md)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text-secondary)',
-                background: 'var(--bg-secondary)',
-                border: '0.5px solid var(--border)',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.4" opacity="0.4"/>
-                <rect x="2" y="2" width="6" height="16" rx="3" fill="currentColor" opacity="0.15"/>
-                <path d="M8 7l2.5 3L8 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/>
-              </svg>
-            </button>
-          </div>
-        )}
+        {/* ── SIDEBAR ── */}
+        <Sidebar
+          collapsed={collapsed}
+          onCollapse={() => setCollapsed(true)}
+          onNavigate={handleNavigate}
+          currentView={currentView}
+          courses={courses}
+          onImport={handleImport}
+          user={user}
+          onOpenSettings={() => handleNavigate('settings')}
+          onOpenProgress={() => handleNavigate('progress')}
+        />
 
-        {/* ── VISTE ── */}
+        {/* ── AREA PRINCIPALE ── */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-        {currentView === 'home' && (
-          <Home
-            courses={courses}
-            onSelectCourse={(course) => handleNavigate('course', course)}
-            onImport={handleImport}
-            onRemove={handleRemove}
-          />
-        )}
-
-        {currentView === 'course' && selectedCourse && (
-          <Course
-            course={selectedCourse}
-            onBack={() => handleNavigate('home')}
-            onProgressUpdate={loadCourses}
-          />
-        )}
-
-        {currentView === 'settings' && (
-          <Settings
-            onBack={() => handleNavigate('home')}
-            onSave={loadUser}
-          />
-        )}
-
-        {currentView === 'progress' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+          {/* Topbar — visibile solo quando la sidebar è chiusa */}
+          {collapsed && (
+            <div style={{
+              height: 48,
+              display: 'flex', alignItems: 'center',
+              padding: '0 16px',
+              borderBottom: '0.5px solid var(--border)',
+              flexShrink: 0,
+            }}>
               <button
-                onClick={() => handleNavigate('home')}
+                onClick={() => setCollapsed(false)}
+                title="Apri barra laterale"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  fontSize: 13, color: 'var(--text-secondary)',
-                  padding: '5px 10px',
+                  width: 28, height: 28,
                   borderRadius: 'var(--radius-md)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text-secondary)',
+                  background: 'var(--bg-secondary)',
                   border: '0.5px solid var(--border)',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.4" opacity="0.4"/>
+                  <rect x="2" y="2" width="6" height="16" rx="3" fill="currentColor" opacity="0.15"/>
+                  <path d="M8 7l2.5 3L8 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/>
                 </svg>
-                Indietro
               </button>
-              <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>Progressi</h1>
             </div>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>
-              Pagina in costruzione — qui vedremo statistiche e storico apprendimento.
-            </p>
-          </div>
-        )}
+          )}
 
+          {/* ── VISTE ── */}
+
+          {currentView === 'home' && (
+            <Home
+              courses={courses}
+              onSelectCourse={(course) => handleNavigate('course', course)}
+              onImport={handleImport}
+              onRemove={handleRemove}
+            />
+          )}
+
+          {currentView === 'course' && selectedCourse && (
+            <Course
+              course={selectedCourse}
+              onBack={() => handleNavigate('home')}
+              onProgressUpdate={loadCourses}
+            />
+          )}
+
+          {currentView === 'settings' && (
+            <Settings
+              onBack={() => handleNavigate('home')}
+              onSave={loadUser}
+            />
+          )}
+
+          {currentView === 'progress' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+                <button
+                  onClick={() => handleNavigate('home')}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, color: 'var(--text-secondary)',
+                    padding: '5px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid var(--border)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Indietro
+                </button>
+                <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>Progressi</h1>
+              </div>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>
+                Pagina in costruzione — qui vedremo statistiche e storico apprendimento.
+              </p>
+            </div>
+          )}
+
+        </div>
       </div>
 
       {/* ── DIALOG IMPORTAZIONE CORSO ── */}
@@ -231,10 +230,8 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
         background: 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
-        padding: 24,
-        width: 420,
-        maxHeight: '85vh',
-        overflowY: 'auto',
+        padding: 24, width: 420,
+        maxHeight: '85vh', overflowY: 'auto',
       }}>
         <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 6, color: 'var(--text-primary)' }}>
           Importa corso
@@ -243,7 +240,6 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
           Personalizza il corso prima di importarlo.
         </p>
 
-        {/* Nome corso */}
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
           Nome corso
         </label>
@@ -253,19 +249,13 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
           autoFocus
           onKeyDown={e => { if (e.key === 'Enter') onConfirm(filePath, name, icon, color) }}
           style={{
-            width: '100%',
-            padding: '8px 12px',
-            fontSize: 13,
-            color: 'var(--text-primary)',
-            background: 'var(--bg-secondary)',
-            border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            outline: 'none',
-            marginBottom: 20,
+            width: '100%', padding: '8px 12px', fontSize: 13,
+            color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+            border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+            outline: 'none', marginBottom: 20,
           }}
         />
 
-        {/* Picker icona e colore */}
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>
           Icona e colore
         </label>
@@ -276,7 +266,6 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
           onSelectColor={setColor}
         />
 
-        {/* Bottoni */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
           <button
             onClick={onCancel}
@@ -294,12 +283,9 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
           <button
             onClick={() => onConfirm(filePath, name, icon, color)}
             style={{
-              padding: '7px 16px', fontSize: 13,
-              color: '#fff',
-              background: color,
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              transition: 'opacity 0.15s',
+              padding: '7px 16px', fontSize: 13, color: '#fff',
+              background: color, border: 'none',
+              borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}

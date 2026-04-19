@@ -9,30 +9,27 @@ const isDev = process.env.NODE_ENV === 'development'
 const db = require('../src/db/database.js')
 
 function createWindow() {
-  // Crea la finestra principale dell'app
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    // Rimuove la toolbar nativa di Electron
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
-      // preload.js è il ponte sicuro tra React e il sistema operativo
       preload: path.join(__dirname, 'preload.js'),
-      // contextIsolation: true — il codice React non ha accesso diretto a Node.js
       contextIsolation: true,
-      // nodeIntegration: false — sicurezza, i corsi JSX non possono accedere al filesystem
       nodeIntegration: false,
     },
   })
 
   if (isDev) {
-    // Sviluppo: carica il server Vite locale
     win.loadURL('http://localhost:5173')
   } else {
-    // Produzione: carica i file compilati da Vite
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 }
 
-// ─ IPC HANDLERS 
+// ─── IPC HANDLERS ────────────────────────────────────────────────────────────
 
 // Apre il dialog di sistema per scegliere un file .jsx da importare
 ipcMain.handle('open-file-dialog', async () => {
@@ -54,7 +51,6 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
   const code = fs.readFileSync(filePath, 'utf-8')
   const dayNums = [...code.matchAll(/\{\s*day\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
   const totalDays = dayNums.length > 0 ? Math.max(...dayNums) : 30
-
   const name = customName || courseId
 
   db.prepare(`
@@ -86,14 +82,13 @@ ipcMain.handle('get-lucide-bundle', () => {
 
 // Salva o aggiorna il progresso di un giorno
 ipcMain.handle('save-progress', (event, courseId, dayId, completed) => {
-  const stmt = db.prepare(`
+  db.prepare(`
     INSERT INTO progress (course_id, day_id, completed, completed_at)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(course_id, day_id) DO UPDATE SET
       completed = excluded.completed,
       completed_at = excluded.completed_at
-  `)
-  stmt.run(courseId, dayId, completed ? 1 : 0, completed ? Date.now() : null)
+  `).run(courseId, dayId, completed ? 1 : 0, completed ? Date.now() : null)
   return { success: true }
 })
 
@@ -102,35 +97,12 @@ ipcMain.handle('get-progress', (event, courseId) => {
   return db.prepare('SELECT * FROM progress WHERE course_id = ?').all(courseId)
 })
 
-// ─ APP LIFECYCLE
-
-// Quando Electron è pronto, apri la finestra
-app.whenReady().then(createWindow)
-
-// Chiudi l'app quando tutte le finestre sono chiuse (comportamento Windows/Linux)
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
-
-// Su Mac, riapri la finestra se l'icona nel dock viene cliccata
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
-})
-
 // Rimuove un corso dal database e cancella il file dalla cartella courses
 ipcMain.handle('remove-course', (event, courseId, filename) => {
-  // Elimina il file .jsx dalla cartella courses
   const filePath = path.join(app.getAppPath(), 'courses', filename)
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath)
-  }
-
-  // Elimina i progressi del corso
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
   db.prepare('DELETE FROM progress WHERE course_id = ?').run(courseId)
-
-  // Elimina il corso dal database
   db.prepare('DELETE FROM courses WHERE id = ?').run(courseId)
-
   return { success: true }
 })
 
@@ -142,7 +114,6 @@ ipcMain.handle('storage-get', (event, courseId, key) => {
 
 // Scrive un valore nello storage del corso e sincronizza i progressi
 ipcMain.handle('storage-set', (event, courseId, key, value) => {
-  // Salva nello storage
   db.prepare(`
     INSERT INTO course_storage (course_id, key, value, updated_at)
     VALUES (?, ?, ?, strftime('%s', 'now'))
@@ -151,7 +122,6 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
       updated_at = excluded.updated_at
   `).run(courseId, key, value)
 
-  // Sincronizza i progressi in base al contenuto salvato
   try {
     const parsed = JSON.parse(value)
     const upsert = db.prepare(`
@@ -161,23 +131,17 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
         completed = excluded.completed,
         completed_at = excluded.completed_at
     `)
-
-    // Formato os-journey: key='completed', value={ "1": true, "2": false, ... }
     if (key === 'completed' && typeof parsed === 'object' && !Array.isArray(parsed)) {
       for (const [dayId, completed] of Object.entries(parsed)) {
         upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
       }
     }
-
-    // Formato unity: key='unity-progress', value={ completed: { "1": true, ... }, currentDay: 2 }
     if (parsed?.completed && typeof parsed.completed === 'object') {
       for (const [dayId, completed] of Object.entries(parsed.completed)) {
         upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
       }
     }
-  } catch (e) {
-    // Il valore non è JSON o non ha progressi — ignora
-  }
+  } catch (e) {}
 
   return { key, value }
 })
@@ -210,4 +174,39 @@ ipcMain.handle('update-user', (event, name, avatar) => {
 // Apre un URL nel browser di sistema
 ipcMain.handle('open-external', (event, url) => {
   shell.openExternal(url)
+})
+
+// ─── CONTROLLI FINESTRA CUSTOM ───────────────────────────────────────────────
+
+// Minimizza la finestra
+ipcMain.handle('window-minimize', () => {
+  BrowserWindow.getFocusedWindow()?.minimize()
+})
+
+// Massimizza o ripristina la finestra
+ipcMain.handle('window-maximize', () => {
+  const win = BrowserWindow.getFocusedWindow()
+  win?.isMaximized() ? win.unmaximize() : win.maximize()
+})
+
+// Chiude la finestra
+ipcMain.handle('window-close', () => {
+  BrowserWindow.getFocusedWindow()?.close()
+})
+
+// Restituisce se la finestra è massimizzata
+ipcMain.handle('window-is-maximized', () => {
+  return BrowserWindow.getFocusedWindow()?.isMaximized() || false
+})
+
+// ─── APP LIFECYCLE ────────────────────────────────────────────────────────────
+
+app.whenReady().then(createWindow)
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
