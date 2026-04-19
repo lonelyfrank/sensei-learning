@@ -17,6 +17,8 @@ db.exec(`
     name TEXT NOT NULL,
     filename TEXT NOT NULL,
     total_days INTEGER DEFAULT 0,
+    icon TEXT DEFAULT 'BookOpen',
+    color TEXT DEFAULT '#378ADD',
     added_at INTEGER DEFAULT (strftime('%s', 'now'))
   );
 

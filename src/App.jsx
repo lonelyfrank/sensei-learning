@@ -3,6 +3,8 @@ import Sidebar from './components/Sidebar.jsx'
 import Home from './pages/Home.jsx'
 import Course from './pages/Course.jsx'
 import Settings from './pages/Settings.jsx'
+import IconPicker from './components/IconPicker.jsx'
+import * as LucideIcons from 'lucide-react'
 
 // Colori assegnati ai corsi in sequenza — si ripetono se ci sono più di 8 corsi
 const COURSE_COLORS = [
@@ -19,26 +21,23 @@ function formatCourseName(id) {
 }
 
 function App() {
-  const [collapsed, setCollapsed] = useState(false)       // sidebar aperta/chiusa
-  const [currentView, setCurrentView] = useState('home')  // vista corrente
-  const [selectedCourse, setSelectedCourse] = useState(null) // corso aperto
-  const [courses, setCourses] = useState([])               // lista corsi con progressi
-  const [user, setUser] = useState({ name: 'Utente', avatar: null }) // profilo utente
-  const [importDialog, setImportDialog] = useState(null)  // dati dialog importazione
+  const [collapsed, setCollapsed] = useState(false)
+  const [currentView, setCurrentView] = useState('home')
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [user, setUser] = useState({ name: 'Utente', avatar: null })
+  const [importDialog, setImportDialog] = useState(null)
 
-  // Carica corsi e profilo all'avvio
   useEffect(() => {
     loadCourses()
     loadUser()
   }, [])
 
-  // Legge il profilo utente dal database
   const loadUser = async () => {
     const result = await window.sensei.getUser()
     if (result) setUser(result)
   }
 
-  // Legge tutti i corsi e calcola i progressi per ognuno
   const loadCourses = async () => {
     const result = await window.sensei.getCourses()
     const coursesWithProgress = await Promise.all(
@@ -48,7 +47,8 @@ function App() {
         const total = course.total_days || 1
         return {
           ...course,
-          color: COURSE_COLORS[index % COURSE_COLORS.length],
+          // Usa il colore salvato nel db, altrimenti assegna dalla palette
+          color: course.color || COURSE_COLORS[index % COURSE_COLORS.length],
           progress: total > 0 ? Math.round((completed / total) * 100) : 0,
           completedDays: completed,
           totalDays: total,
@@ -58,14 +58,11 @@ function App() {
     setCourses(coursesWithProgress)
   }
 
-  // Cambia la vista corrente e imposta il corso selezionato se necessario
   const handleNavigate = (view, course = null) => {
     setCurrentView(view)
     setSelectedCourse(course)
   }
 
-  // Apre il dialog di sistema per scegliere un file JSX
-  // poi mostra il dialog interno per personalizzare il nome
   const handleImport = async () => {
     const result = await window.sensei.openFileDialog()
     if (result.canceled) return
@@ -73,17 +70,21 @@ function App() {
     const filename = filePath.split('/').pop()
     const courseId = filename.replace('.jsx', '')
     const suggestedName = formatCourseName(courseId)
-    setImportDialog({ filePath, suggestedName })
+    setImportDialog({
+      filePath,
+      suggestedName,
+      icon: 'BookOpen',        // icona default
+      color: '#378ADD',        // colore default
+    })
   }
 
-  // Conferma l'importazione con il nome scelto dall'utente
-  const handleImportConfirm = async (filePath, name) => {
-    await window.sensei.importCourse(filePath, name)
+  // Conferma importazione con nome, icona e colore scelti
+  const handleImportConfirm = async (filePath, name, icon, color) => {
+    await window.sensei.importCourse(filePath, name, icon, color)
     setImportDialog(null)
     loadCourses()
   }
 
-  // Rimuove un corso dal database e dal filesystem
   const handleRemove = async (course) => {
     await window.sensei.removeCourse(course.id, course.filename)
     loadCourses()
@@ -108,8 +109,7 @@ function App() {
       {/* ── AREA PRINCIPALE ── */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Topbar — visibile solo quando la sidebar è chiusa
-            contiene il bottone per riaprirla senza sovrapposi al contenuto */}
+        {/* Topbar — visibile solo quando la sidebar è chiusa */}
         {collapsed && (
           <div style={{
             height: 52,
@@ -144,7 +144,6 @@ function App() {
 
         {/* ── VISTE ── */}
 
-        {/* Dashboard principale con lista corsi */}
         {currentView === 'home' && (
           <Home
             courses={courses}
@@ -154,7 +153,6 @@ function App() {
           />
         )}
 
-        {/* Visualizzatore corso con iframe sandbox */}
         {currentView === 'course' && selectedCourse && (
           <Course
             course={selectedCourse}
@@ -163,7 +161,6 @@ function App() {
           />
         )}
 
-        {/* Impostazioni profilo utente */}
         {currentView === 'settings' && (
           <Settings
             onBack={() => handleNavigate('home')}
@@ -171,7 +168,6 @@ function App() {
           />
         )}
 
-        {/* Panoramica progressi — placeholder, da sviluppare */}
         {currentView === 'progress' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
@@ -202,12 +198,13 @@ function App() {
 
       </div>
 
-      {/* ── DIALOG IMPORTAZIONE CORSO ──
-          Appare sopra tutto quando l'utente sceglie un file */}
+      {/* ── DIALOG IMPORTAZIONE CORSO ── */}
       {importDialog && (
         <ImportDialog
           suggestedName={importDialog.suggestedName}
           filePath={importDialog.filePath}
+          defaultIcon={importDialog.icon}
+          defaultColor={importDialog.color}
           onConfirm={handleImportConfirm}
           onCancel={() => setImportDialog(null)}
         />
@@ -217,9 +214,11 @@ function App() {
   )
 }
 
-/* Dialog modale per personalizzare il nome del corso all'importazione */
-function ImportDialog({ suggestedName, filePath, onConfirm, onCancel }) {
+/* Dialog modale per personalizzare nome, icona e colore del corso */
+function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel }) {
   const [name, setName] = useState(suggestedName)
+  const [icon, setIcon] = useState(defaultIcon)
+  const [color, setColor] = useState(defaultColor)
 
   return (
     <div style={{
@@ -233,15 +232,18 @@ function ImportDialog({ suggestedName, filePath, onConfirm, onCancel }) {
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
         padding: 24,
-        width: 360,
+        width: 420,
+        maxHeight: '85vh',
+        overflowY: 'auto',
       }}>
         <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 6, color: 'var(--text-primary)' }}>
           Importa corso
         </h2>
-        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>
-          Dai un nome al corso che stai importando.
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 20 }}>
+          Personalizza il corso prima di importarlo.
         </p>
 
+        {/* Nome corso */}
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
           Nome corso
         </label>
@@ -249,8 +251,7 @@ function ImportDialog({ suggestedName, filePath, onConfirm, onCancel }) {
           value={name}
           onChange={e => setName(e.target.value)}
           autoFocus
-          // Invio = conferma importazione
-          onKeyDown={e => { if (e.key === 'Enter') onConfirm(filePath, name) }}
+          onKeyDown={e => { if (e.key === 'Enter') onConfirm(filePath, name, icon, color) }}
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -264,7 +265,19 @@ function ImportDialog({ suggestedName, filePath, onConfirm, onCancel }) {
           }}
         />
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        {/* Picker icona e colore */}
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>
+          Icona e colore
+        </label>
+        <IconPicker
+          selectedIcon={icon}
+          selectedColor={color}
+          onSelectIcon={setIcon}
+          onSelectColor={setColor}
+        />
+
+        {/* Bottoni */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
           <button
             onClick={onCancel}
             style={{
@@ -279,16 +292,17 @@ function ImportDialog({ suggestedName, filePath, onConfirm, onCancel }) {
             Annulla
           </button>
           <button
-            onClick={() => onConfirm(filePath, name)}
+            onClick={() => onConfirm(filePath, name, icon, color)}
             style={{
               padding: '7px 16px', fontSize: 13,
               color: '#fff',
-              background: '#378ADD',
+              background: color,
               border: 'none',
               borderRadius: 'var(--radius-md)',
+              transition: 'opacity 0.15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = '#2a6fb5'}
-            onMouseLeave={e => e.currentTarget.style.background = '#378ADD'}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             Importa
           </button>

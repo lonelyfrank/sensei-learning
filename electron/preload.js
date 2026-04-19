@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('sensei', {
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
 
   // Importa un corso copiandolo nella cartella /courses e registrandolo nel db
-  importCourse: (filePath, name) => ipcRenderer.invoke('import-course', filePath, name),
+  importCourse: (filePath, name, icon, color) => ipcRenderer.invoke('import-course', filePath, name, icon, color),
 
   // Legge tutti i corsi registrati nel database
   getCourses: () => ipcRenderer.invoke('get-courses'),
