@@ -15,6 +15,7 @@ function createWindow() {
     // Rimuove la toolbar nativa di Electron
     frame: false,
     titleBarStyle: 'hidden',
+    icon: path.join(__dirname, '../public/sensei-logo.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -4,7 +4,6 @@ function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
-    // Controlla lo stato iniziale della finestra
     window.sensei.windowIsMaximized().then(setIsMaximized)
   }, [])
 
@@ -19,12 +18,11 @@ function TitleBar() {
   return (
     <div
       style={{
-        // -webkit-app-region: drag permette di trascinare la finestra
         WebkitAppRegion: 'drag',
         height: 40,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         padding: '0 12px',
         background: 'var(--bg-secondary)',
         borderBottom: '0.5px solid var(--border)',
@@ -32,23 +30,9 @@ function TitleBar() {
         userSelect: 'none',
       }}
     >
-      {/* Logo + Nome app */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{
-          width: 20, height: 20, borderRadius: 5,
-          background: '#378ADD22',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 700, color: '#378ADD',
-        }}>S</div>
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-          Sensei
-        </span>
-      </div>
-
       {/* Controlli finestra — no drag su questi bottoni */}
-      <div
-        style={{ display: 'flex', alignItems: 'center', gap: 4, WebkitAppRegion: 'no-drag' }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, WebkitAppRegion: 'no-drag' }}>
+
         {/* Minimizza */}
         <WindowButton onClick={handleMinimize} title="Minimizza">
           <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
@@ -76,6 +60,7 @@ function TitleBar() {
             <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </WindowButton>
+
       </div>
     </div>
   )

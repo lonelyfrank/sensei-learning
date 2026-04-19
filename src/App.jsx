@@ -5,6 +5,7 @@ import Course from './pages/Course.jsx'
 import Settings from './pages/Settings.jsx'
 import IconPicker from './components/IconPicker.jsx'
 import TitleBar from './components/TitleBar.jsx'
+import Progress from './pages/Progress.jsx'
 
 // Colori assegnati ai corsi in sequenza
 const COURSE_COLORS = [
@@ -167,31 +168,10 @@ function App() {
           )}
 
           {currentView === 'progress' && (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
-                <button
-                  onClick={() => handleNavigate('home')}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    fontSize: 13, color: 'var(--text-secondary)',
-                    padding: '5px 10px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '0.5px solid var(--border)',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Indietro
-                </button>
-                <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>Progressi</h1>
-              </div>
-              <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>
-                Pagina in costruzione — qui vedremo statistiche e storico apprendimento.
-              </p>
-            </div>
+            <Progress
+              onBack={() => handleNavigate('home')}
+              courses={courses}
+            />
           )}
 
         </div>

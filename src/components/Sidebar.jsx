@@ -32,8 +32,12 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
         padding: '12px 14px', borderBottom: '0.5px solid var(--border)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: '#378ADD22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: '#378ADD' }}>S</div>
-          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Sensei</span>
+          <img
+            src="/sensei-logo.png"
+            style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 6 }}
+            alt="Sensei"
+          />
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>Sensei</span>
         </div>
         <button
           onClick={onCollapse}
@@ -77,7 +81,6 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              {/* Icona corso o pallino fallback */}
               <div style={{ width: 20, height: 20, borderRadius: 5, background: course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {Icon
                   ? <Icon size={12} color={course.color} />
@@ -125,7 +128,6 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
   )
 }
 
-// Bottone generico per il menu profilo
 function MenuButton({ icon, label, onClick }) {
   return (
     <button
