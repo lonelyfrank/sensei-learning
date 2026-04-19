@@ -4,7 +4,6 @@ const { contextBridge, ipcRenderer } = require('electron')
 // React le vedrà come window.sensei.nomeMetodo()
 // ipcRenderer invia messaggi al processo principale (main.js)
 contextBridge.exposeInMainWorld('sensei', {
-
   // Apre il dialog di sistema per scegliere un file .jsx
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
 
@@ -25,5 +24,17 @@ contextBridge.exposeInMainWorld('sensei', {
   // Rimuove un corso dal database e dal filesystem
   removeCourse: (courseId, filename) =>
     ipcRenderer.invoke('remove-course', courseId, filename),
+
+  // Storage API per i corsi — sostituisce window.storage degli artifact Claude
+  storage: {
+    get: (key) => ipcRenderer.invoke('storage-get', window.__currentCourseId, key),
+    set: (key, value) => ipcRenderer.invoke('storage-set', window.__currentCourseId, key, value),
+    delete: (key) => ipcRenderer.invoke('storage-delete', window.__currentCourseId, key),
+    list: (prefix) => ipcRenderer.invoke('storage-list', window.__currentCourseId, prefix),
+  },
+
+  // Profilo utente
+  getUser: () => ipcRenderer.invoke('get-user'),
+  updateUser: (name, avatar) => ipcRenderer.invoke('update-user', name, avatar),
 
 })

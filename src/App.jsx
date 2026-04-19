@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Home from './pages/Home.jsx'
 import Course from './pages/Course.jsx'
+import Settings from './pages/Settings.jsx'
 
-// Colori assegnati ai corsi in sequenza
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
   '#D4537E', '#BA7517', '#639922', '#E24B4A',
@@ -14,16 +14,20 @@ function App() {
   const [currentView, setCurrentView] = useState('home')
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [courses, setCourses] = useState([])
+  const [user, setUser] = useState({ name: 'Utente', avatar: null })
 
-  // Carica i corsi all'avvio
   useEffect(() => {
     loadCourses()
+    loadUser()
   }, [])
+
+  const loadUser = async () => {
+    const result = await window.sensei.getUser()
+    if (result) setUser(result)
+  }
 
   const loadCourses = async () => {
     const result = await window.sensei.getCourses()
-
-    // Per ogni corso carica anche i progressi
     const coursesWithProgress = await Promise.all(
       result.map(async (course, index) => {
         const progress = await window.sensei.getProgress(course.id)
@@ -54,14 +58,13 @@ function App() {
   }
 
   const handleRemove = async (course) => {
-  await window.sensei.removeCourse(course.id, course.filename)
-  loadCourses()
+    await window.sensei.removeCourse(course.id, course.filename)
+    loadCourses()
   }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
-      {/* Sidebar */}
       <Sidebar
         collapsed={collapsed}
         onCollapse={() => setCollapsed(true)}
@@ -69,12 +72,13 @@ function App() {
         currentView={currentView}
         courses={courses}
         onImport={handleImport}
+        user={user}
+        onOpenSettings={() => handleNavigate('settings')}
       />
 
-      {/* Area principale */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Bottone riapri sidebar quando è chiusa */}
+        {/* Bottone riapri sidebar */}
         {collapsed && (
           <button
             onClick={() => setCollapsed(false)}
@@ -99,14 +103,12 @@ function App() {
           </button>
         )}
 
-        {/* Viste */}
         {currentView === 'home' && (
           <Home
             courses={courses}
             onSelectCourse={(course) => handleNavigate('course', course)}
             onImport={handleImport}
             onRemove={handleRemove}
-            onCoursesUpdate={loadCourses}
           />
         )}
         {currentView === 'course' && selectedCourse && (
@@ -116,8 +118,14 @@ function App() {
             onProgressUpdate={loadCourses}
           />
         )}
-      </div>
+        {currentView === 'settings' && (
+          <Settings
+            onBack={() => handleNavigate('home')}
+            onSave={loadUser}
+          />
+        )}
 
+      </div>
     </div>
   )
 }

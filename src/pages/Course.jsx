@@ -7,6 +7,9 @@ function Course({ course, onBack, onProgressUpdate }) {
 
   // Carica i progressi quando il componente si monta
   useEffect(() => {
+    // Imposta subito l'ID del corso e lo shim storage
+    window.__currentCourseId = course.id
+    window.storage = window.sensei.storage
     loadProgress()
     loadCourseComponent()
   }, [course.id])
@@ -22,6 +25,7 @@ function Course({ course, onBack, onProgressUpdate }) {
   const loadCourseComponent = async () => {
     try {
       setError(null)
+      
       // Importa il file JSX dalla cartella courses
       const module = await import(/* @vite-ignore */ `../../courses/${course.filename}`)
       setCourseComponent(() => module.default)

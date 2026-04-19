@@ -27,6 +27,23 @@ db.exec(`
     completed_at INTEGER,
     UNIQUE(course_id, day_id)
   );
+
+  CREATE TABLE IF NOT EXISTS course_storage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+    UNIQUE(course_id, key)
+  );
+
+  CREATE TABLE IF NOT EXISTS user (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    name TEXT DEFAULT 'Utente',
+    avatar TEXT DEFAULT NULL
+  );
+
+  INSERT OR IGNORE INTO user (id, name) VALUES (1, 'Utente');
 `)
 
 module.exports = db

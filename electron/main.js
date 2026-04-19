@@ -116,3 +116,46 @@ ipcMain.handle('remove-course', (event, courseId, filename) => {
 
   return { success: true }
 })
+
+// Legge un valore dallo storage del corso
+ipcMain.handle('storage-get', (event, courseId, key) => {
+  const row = db.prepare('SELECT value FROM course_storage WHERE course_id = ? AND key = ?').get(courseId, key)
+  return row ? { key, value: row.value } : null
+})
+
+// Scrive un valore nello storage del corso
+ipcMain.handle('storage-set', (event, courseId, key, value) => {
+  db.prepare(`
+    INSERT INTO course_storage (course_id, key, value, updated_at)
+    VALUES (?, ?, ?, strftime('%s', 'now'))
+    ON CONFLICT(course_id, key) DO UPDATE SET
+      value = excluded.value,
+      updated_at = excluded.updated_at
+  `).run(courseId, key, value)
+  return { key, value }
+})
+
+// Elimina un valore dallo storage del corso
+ipcMain.handle('storage-delete', (event, courseId, key) => {
+  db.prepare('DELETE FROM course_storage WHERE course_id = ? AND key = ?').run(courseId, key)
+  return { key, deleted: true }
+})
+
+// Lista tutte le chiavi dello storage del corso
+ipcMain.handle('storage-list', (event, courseId, prefix) => {
+  const rows = prefix
+    ? db.prepare('SELECT key FROM course_storage WHERE course_id = ? AND key LIKE ?').all(courseId, `${prefix}%`)
+    : db.prepare('SELECT key FROM course_storage WHERE course_id = ?').all(courseId)
+  return { keys: rows.map(r => r.key) }
+})
+
+// Legge il profilo utente
+ipcMain.handle('get-user', () => {
+  return db.prepare('SELECT * FROM user WHERE id = 1').get()
+})
+
+// Aggiorna il profilo utente
+ipcMain.handle('update-user', (event, name, avatar) => {
+  db.prepare('UPDATE user SET name = ?, avatar = ? WHERE id = 1').run(name, avatar)
+  return { success: true }
+})
