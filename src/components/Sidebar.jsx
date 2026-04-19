@@ -2,13 +2,9 @@ import React, { useState } from 'react'
 
 function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onImport, user, onOpenSettings, onOpenProgress }) {
 
-  // Filtra solo i corsi in corso (progresso > 0 e < 100%)
   const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100)
-
-  // Stato del menu profilo
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
-  // Genera le iniziali dal nome utente
   const initials = (user?.name || 'U')
     .split(' ')
     .map(w => w[0])
@@ -39,10 +35,8 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Logo provvisorio */}
           <div style={{
-            width: 26, height: 26,
-            borderRadius: 7,
+            width: 26, height: 26, borderRadius: 7,
             background: '#378ADD22',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 13, fontWeight: 600, color: '#378ADD',
@@ -50,7 +44,6 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
           <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Sensei</span>
         </div>
 
-        {/* Bottone chiudi sidebar */}
         <button
           onClick={onCollapse}
           title="Chiudi barra laterale"
@@ -74,41 +67,17 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
 
       {/* ── NAV PRINCIPALE ── */}
       <div style={{ padding: '12px 8px 8px', flexShrink: 0 }}>
-        {/* Dashboard corsi */}
-        <NavItem
-          icon={<GridIcon />}
-          label="I miei corsi"
-          active={currentView === 'home'}
-          onClick={() => onNavigate('home')}
-        />
-        {/* Importa un nuovo corso JSX */}
-        <NavItem
-          icon={<PlusIcon />}
-          label="Importa corso"
-          onClick={onImport}
-        />
-        {/* Crea corso — funzione futura */}
-        <NavItem
-          icon={<CreateIcon />}
-          label="Crea"
-          disabled
-          badge="presto"
-        />
+        <NavItem icon={<GridIcon />} label="I miei corsi" active={currentView === 'home'} onClick={() => onNavigate('home')} />
+        <NavItem icon={<PlusIcon />} label="Importa corso" onClick={onImport} />
+        {/* Crea corso — attivabile a breve */}
+        <NavItem icon={<CreateIcon />} label="Crea" onClick={() => {}} />
         {/* Libreria pubblica — funzione futura */}
-        <NavItem
-          icon={<LibraryIcon />}
-          label="Libreria"
-          disabled
-          badge="presto"
-        />
+        <NavItem icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
       </div>
 
       {/* ── SEZIONE: Corsi in corso ── */}
       <div style={{ padding: '8px 16px 6px', flexShrink: 0 }}>
-        <span style={{
-          fontSize: 11, color: 'var(--text-tertiary)',
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-        }}>
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           In corso
         </span>
       </div>
@@ -128,18 +97,13 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '7px 10px',
               borderRadius: 'var(--radius-md)',
-              cursor: 'pointer',
-              marginBottom: 2,
+              cursor: 'pointer', marginBottom: 2,
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            {/* Pallino colorato identificativo corso */}
             <div style={{ width: 8, height: 8, borderRadius: 2, background: course.color, flexShrink: 0 }} />
-            <span style={{
-              fontSize: 13, color: 'var(--text-secondary)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-            }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
               {course.name}
             </span>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{course.progress}%</span>
@@ -150,27 +114,24 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
       {/* ── BOTTOM: Profilo utente + menu contestuale ── */}
       <div style={{ borderTop: '0.5px solid var(--border)', padding: '10px 8px', flexShrink: 0, position: 'relative' }}>
 
-        {/* Menu contestuale profilo — appare sopra il bottone */}
+        {/* Menu contestuale — appare sopra il bottone profilo */}
         {profileMenuOpen && (
           <div style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 8, right: 8,
+            position: 'absolute', bottom: '100%', left: 8, right: 8,
             background: 'var(--bg-primary)',
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            marginBottom: 4,
+            overflow: 'hidden', marginBottom: 4,
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           }}>
-            {/* Progressi — panoramica apprendimento */}
+
+            {/* Progressi */}
             <button
               onClick={() => { setProfileMenuOpen(false); onOpenProgress() }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 width: '100%', padding: '9px 14px',
-                fontSize: 13, color: 'var(--text-primary)',
-                textAlign: 'left',
+                fontSize: 13, color: 'var(--text-primary)', textAlign: 'left',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -179,17 +140,13 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
               Progressi
             </button>
 
-            {/* Divisore */}
-            <div style={{ height: '0.5px', background: 'var(--border)' }} />
-
-            {/* Impostazioni profilo */}
+            {/* Impostazioni */}
             <button
               onClick={() => { setProfileMenuOpen(false); onOpenSettings() }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 width: '100%', padding: '9px 14px',
-                fontSize: 13, color: 'var(--text-primary)',
-                textAlign: 'left',
+                fontSize: 13, color: 'var(--text-primary)', textAlign: 'left',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -197,10 +154,32 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
               <SettingsIcon />
               Impostazioni
             </button>
+
+            {/* Divisore */}
+            <div style={{ height: '0.5px', background: 'var(--border)', margin: '2px 0' }} />
+
+            {/* Aiuto — link alla repo GitHub */}
+            <button
+              onClick={() => { 
+                setProfileMenuOpen(false)
+                window.sensei.openExternal('https://github.com/lonelyfrank/sensei-learning')
+                }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '9px 14px',
+                fontSize: 13, color: 'var(--text-primary)', textAlign: 'left',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <HelpIcon />
+              Aiuto
+            </button>
+
           </div>
         )}
 
-        {/* Bottone profilo — clicca per aprire il menu */}
+        {/* Bottone profilo */}
         <div
           onClick={() => setProfileMenuOpen(o => !o)}
           style={{
@@ -213,14 +192,13 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
           onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
           onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent' }}
         >
-          {/* Avatar — immagine o iniziali */}
+          {/* Avatar */}
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
             background: '#EEEDFE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7',
-            overflow: 'hidden',
-            border: '0.5px solid var(--border)',
+            overflow: 'hidden', border: '0.5px solid var(--border)',
           }}>
             {user?.avatar
               ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -228,13 +206,8 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
             }
           </div>
 
-          {/* Nome e corsi attivi */}
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <p style={{
-              margin: 0, fontSize: 13, fontWeight: 500,
-              color: 'var(--text-primary)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.name || 'Utente'}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
@@ -256,8 +229,7 @@ function NavItem({ icon, label, active, onClick, disabled, badge }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '7px 10px',
-        borderRadius: 'var(--radius-md)',
-        marginBottom: 2,
+        borderRadius: 'var(--radius-md)', marginBottom: 2,
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.4 : 1,
         background: active ? 'var(--bg-primary)' : 'transparent',
@@ -273,8 +245,7 @@ function NavItem({ icon, label, active, onClick, disabled, badge }) {
       {badge && (
         <span style={{
           marginLeft: 'auto', fontSize: 10,
-          color: 'var(--text-tertiary)',
-          background: 'var(--bg-tertiary)',
+          color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)',
           padding: '1px 6px', borderRadius: 10,
         }}>{badge}</span>
       )}
@@ -305,17 +276,20 @@ function PlusIcon() {
 
 function LibraryIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M19.5617 7C19.7904 5.69523 18.7863 4.5 17.4617 4.5H6.53788C5.21323 4.5 4.20922 5.69523 4.43784 7" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M17.4999 4.5C17.5283 4.24092 17.5425 4.11135 17.5427 4.00435C17.545 2.98072 16.7739 2.12064 15.7561 2.01142C15.6497 2 15.5194 2 15.2588 2H8.74099C8.48035 2 8.35002 2 8.24362 2.01142C7.22584 2.12064 6.45481 2.98072 6.45704 4.00434C6.45727 4.11135 6.47146 4.2409 6.49983 4.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M15 18H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M21.1935 16.793C20.8437 19.2739 20.6689 20.5143 19.7717 21.2572C18.8745 22 17.5512 22 14.9046 22H9.09536C6.44881 22 5.12553 22 4.22834 21.2572C3.33115 20.5143 3.15626 19.2739 2.80648 16.793L2.38351 13.793C1.93748 10.6294 1.71447 9.04765 2.66232 8.02383C3.61017 7 5.29758 7 8.67239 7H15.3276C18.7024 7 20.3898 7 21.3377 8.02383C22.0865 8.83268 22.1045 9.98979 21.8592 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   )
 }
 
 function CreateIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path d="M2 12V4a1 1 0 011-1h10a1 1 0 011 1v8" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M1 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M21.2799 6.40005L11.7399 15.94C10.7899 16.89 7.96987 17.33 7.33987 16.7C6.70987 16.07 7.13987 13.25 8.08987 12.3L17.6399 2.75002C17.8754 2.49308 18.1605 2.28654 18.4781 2.14284C18.7956 1.99914 19.139 1.92124 19.4875 1.9139C19.8359 1.90657 20.1823 1.96991 20.5056 2.10012C20.8289 2.23033 21.1225 2.42473 21.3686 2.67153C21.6147 2.91833 21.8083 3.21243 21.9376 3.53609C22.0669 3.85976 22.1294 4.20626 22.1211 4.55471C22.1128 4.90316 22.0339 5.24635 21.8894 5.5635C21.7448 5.88065 21.5375 6.16524 21.2799 6.40005Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M11 4H6C4.93913 4 3.92178 4.42142 3.17163 5.17157C2.42149 5.92172 2 6.93913 2 8V18C2 19.0609 2.42149 20.0783 3.17163 20.8284C3.92178 21.5786 4.93913 22 6 22H17C19.21 22 20 20.2 20 18V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -332,11 +306,16 @@ function SettingsIcon() {
 function ProgressIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <path d="M3 12h4M10 6h4M10 18h4M17 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="5" cy="12" r="2" stroke="currentColor" strokeWidth="1.5"/>
-      <circle cx="12" cy="6" r="2" stroke="currentColor" strokeWidth="1.5"/>
-      <circle cx="12" cy="18" r="2" stroke="currentColor" strokeWidth="1.5"/>
-      <circle cx="19" cy="9" r="2" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M14.5 19.5H9.5M14.5 19.5C14.5 18.7865 14.5 18.4297 14.5381 18.193C14.6609 17.4296 14.6824 17.3815 15.1692 16.7807C15.3201 16.5945 15.8805 16.0927 17.0012 15.0892C18.5349 13.7159 19.5 11.7206 19.5 9.5C19.5 8.62341 19.3496 7.78195 19.0732 7M14.5 19.5C14.5 20.4346 14.5 20.9019 14.299 21.25C14.1674 21.478 13.978 21.6674 13.75 21.799C13.4019 22 12.9346 22 12 22C11.0654 22 10.5981 22 10.25 21.799C10.022 21.6674 9.83261 21.478 9.70096 21.25C9.5 20.9019 9.5 20.4346 9.5 19.5M9.5 19.5C9.5 18.7865 9.5 18.4297 9.46192 18.193C9.3391 17.4296 9.31762 17.3815 8.83082 16.7807C8.67987 16.5945 8.11945 16.0927 6.99876 15.0892C5.4651 13.7159 4.5 11.7206 4.5 9.5C4.5 5.35786 7.85786 2 12 2C13.3637 2 14.6423 2.36394 15.7442 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M12.7857 8.5L10.6428 11.5H13.6428L11.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function HelpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M0.877075 7.49972C0.877075 3.84204 3.84222 0.876892 7.49991 0.876892C11.1576 0.876892 14.1227 3.84204 14.1227 7.49972C14.1227 11.1574 11.1576 14.1226 7.49991 14.1226C3.84222 14.1226 0.877075 11.1574 0.877075 7.49972ZM7.49991 1.82689C4.36689 1.82689 1.82708 4.36671 1.82708 7.49972C1.82708 10.6327 4.36689 13.1726 7.49991 13.1726C10.6329 13.1726 13.1727 10.6327 13.1727 7.49972C13.1727 4.36671 10.6329 1.82689 7.49991 1.82689ZM8.24993 10.5C8.24993 10.9142 7.91414 11.25 7.49993 11.25C7.08571 11.25 6.74993 10.9142 6.74993 10.5C6.74993 10.0858 7.08571 9.75 7.49993 9.75C7.91414 9.75 8.24993 10.0858 8.24993 10.5ZM6.05003 6.25C6.05003 5.57211 6.63511 4.925 7.50003 4.925C8.36496 4.925 8.95003 5.57211 8.95003 6.25C8.95003 6.74118 8.68002 6.99212 8.21447 7.27494C8.16251 7.30651 8.10258 7.34131 8.03847 7.37854L8.03841 7.37858C7.85521 7.48497 7.63788 7.61119 7.47449 7.73849C7.23214 7.92732 6.95003 8.23198 6.95003 8.7C6.95004 9.00376 7.19628 9.25 7.50004 9.25C7.8024 9.25 8.04778 9.00601 8.05002 8.70417L8.05056 8.7033C8.05924 8.6896 8.08493 8.65735 8.15058 8.6062C8.25207 8.52712 8.36508 8.46163 8.51567 8.37436L8.51571 8.37433C8.59422 8.32883 8.68296 8.27741 8.78559 8.21506C9.32004 7.89038 10.05 7.35382 10.05 6.25C10.05 4.92789 8.93511 3.825 7.50003 3.825C6.06496 3.825 4.95003 4.92789 4.95003 6.25C4.95003 6.55376 5.19628 6.8 5.50003 6.8C5.80379 6.8 6.05003 6.55376 6.05003 6.25Z" fill="currentColor"/>
     </svg>
   )
 }

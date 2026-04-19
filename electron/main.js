@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -207,4 +207,9 @@ ipcMain.handle('get-user', () => {
 ipcMain.handle('update-user', (event, name, avatar) => {
   db.prepare('UPDATE user SET name = ?, avatar = ? WHERE id = 1').run(name, avatar)
   return { success: true }
+})
+
+// Apre un URL nel browser di sistema
+ipcMain.handle('open-external', (event, url) => {
+  shell.openExternal(url)
 })

@@ -43,4 +43,7 @@ contextBridge.exposeInMainWorld('sensei', {
   getUser: () => ipcRenderer.invoke('get-user'),
   updateUser: (name, avatar) => ipcRenderer.invoke('update-user', name, avatar),
 
+  // Apre un URL nel browser esterno del sistema
+  openExternal: (url) => ipcRenderer.invoke('open-external', url), 
+
 })
