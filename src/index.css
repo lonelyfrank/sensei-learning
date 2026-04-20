@@ -199,6 +199,51 @@
   --icon-color: #1c1c1e;
 }
 
+/* Avocado — verde soft */
+.theme-avocado {
+  --bg-primary: #344640;
+  --bg-secondary: #3B5249;
+  --bg-tertiary: #13533a;
+  --text-primary: #BEC5AD;
+  --text-secondary: #A4B494;
+  --text-tertiary: #8EA37B;
+  --border: rgba(72, 187, 120, 0.1);
+  --border-hover: rgba(72, 187, 120, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #A4B494;
+  --icon-color: #34252F;
+}
+
+/* Artic — glaciale chiaro */
+.theme-artic {
+  --bg-primary: #CAF0F8;
+  --bg-secondary: #ADE8F4;
+  --bg-tertiary: #90E0EF;
+  --text-primary: #023E8A;
+  --text-secondary: #0077B6;
+  --text-tertiary: #0096C7;
+  --border: rgba(3, 4, 94, 0.08);
+  --border-hover: rgba(3, 4, 94, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #CAF0F8;
+  --icon-color: #023E8A;
+}
+
+/* Aqua — light liquid */
+.theme-aqua {
+  --bg-primary: #C4FFF9;
+  --bg-secondary: #9CEAEF;
+  --bg-tertiary: #68D8D6;
+  --text-primary: #1D4E89;
+  --text-secondary: #1A5B92;
+  --text-tertiary: #0F80AA;
+  --border: rgba(29, 78, 137, 0.1);
+  --border-hover: rgba(29, 78, 137, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #C4FFF9;
+  --icon-color: #1D4E89;
+}
+
 /* ── BASE ── */
 
 html, body, #root {

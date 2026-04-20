@@ -20,6 +20,9 @@ export const THEMES_CUSTOM = [
   { id: 'sakura',   label: 'Sakura',   preview: ['#fff0f5', '#ffe4ef', '#4a1228'] },
   { id: 'rose',     label: 'Rose',     preview: ['#fff5f7', '#ffe4e8', '#1a0a0e'] },
   { id: 'graphite', label: 'Graphite', preview: ['#1c1c1e', '#2c2c2e', '#e5e5ea'] },
+  { id: 'avocado', label: 'Avocado', preview: ['#344640', '#3B5249', '#BEC5AD'] },
+  { id: 'artic', label: 'Artic', preview: ['#CAF0F8', '#ADE8F4', '#023E8A'] },
+  { id: 'aqua', label: 'Aqua', preview: ['#C4FFF9', '#9CEAEF', '#023E8A'] },
 ]
 
 // Tutti i temi combinati
