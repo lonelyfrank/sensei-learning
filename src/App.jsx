@@ -7,7 +7,7 @@ import IconPicker from './components/IconPicker.jsx'
 import TitleBar from './components/TitleBar.jsx'
 import Progress from './pages/Progress.jsx'
 import CreateHub from './pages/CreateHub.jsx'
-import Create from './pages/CreateWithAI.jsx'
+import Create from './create/with-ai/CreateWithAI.jsx'
 
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
