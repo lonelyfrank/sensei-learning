@@ -28,6 +28,9 @@
   --text-tertiary: #666666;
   --border: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #a0a0a0;
+  --icon-color: #2e2e2e;
 }
 
 /* Light */
@@ -40,6 +43,10 @@
   --text-tertiary: #a0a0a0;
   --border: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(0, 0, 0, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #e8e8e8;
+  --icon-color: #1a1a1a;
+  
 }
 
 /* Midnight — blu notte profondo */
@@ -52,6 +59,9 @@
   --text-tertiary: #475569;
   --border: rgba(99, 179, 237, 0.1);
   --border-hover: rgba(99, 179, 237, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #94a3b8;
+  --icon-color: #1a2338;
 }
 
 /* Forest — verde scuro */
@@ -64,6 +74,9 @@
   --text-tertiary: #4a7a58;
   --border: rgba(72, 187, 120, 0.1);
   --border-hover: rgba(72, 187, 120, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #86b094;
+  --icon-color: #1a2e22;
 }
 
 /* Amber — caldo scuro */
@@ -76,6 +89,9 @@
   --text-tertiary: #92400e;
   --border: rgba(245, 158, 11, 0.1);
   --border-hover: rgba(245, 158, 11, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #fef3c7;
+  --icon-color: #92400e;
 }
 
 /* Rose — chiaro rosato */
@@ -88,6 +104,9 @@
   --text-tertiary: #be185d;
   --border: rgba(244, 63, 94, 0.1);
   --border-hover: rgba(244, 63, 94, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #fecdd3;
+  --icon-color: #9f1239;
 }
 
 /* Nord — grigio-blu freddo */
@@ -100,6 +119,9 @@
   --text-tertiary: #81a1c1;
   --border: rgba(236, 239, 244, 0.08);
   --border-hover: rgba(236, 239, 244, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #81a1c1;
+  --icon-color: #2e3440;
 }
 
 /* Obsidian — nero puro con accenti indaco */
@@ -112,6 +134,9 @@
   --text-tertiary: #4a4a6a;
   --border: rgba(100, 100, 180, 0.1);
   --border-hover: rgba(100, 100, 180, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #c9c9e0;
+  --icon-color: #1a1a25;
 }
 
 /* Ocean — blu profondo con accenti ciano */
@@ -124,6 +149,9 @@
   --text-tertiary: #3d7ab5;
   --border: rgba(100, 180, 255, 0.1);
   --border-hover: rgba(100, 180, 255, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #cce5ff;
+  --icon-color: #112a50;
 }
 
 /* Paper — bianco caldo stile carta */
@@ -136,6 +164,9 @@
   --text-tertiary: #a08060;
   --border: rgba(44, 36, 22, 0.1);
   --border-hover: rgba(44, 36, 22, 0.18);
+  --icon-filter: brightness(0);
+  --bg-icon: #e0d8cc;
+  --icon-color: #2c2416;
 }
 
 /* Sakura — rosa tenue stile giapponese */
@@ -148,6 +179,24 @@
   --text-tertiary: #c47090;
   --border: rgba(74, 18, 40, 0.1);
   --border-hover: rgba(74, 18, 40, 0.18);
+  --icon-filter: brightness(0);
+  --bg-icon: #ffe4ef;
+  --icon-color: #4a1228;
+}
+
+/* Graphite — antracite elegante */
+.theme-graphite {
+  --bg-primary: #1c1c1e;
+  --bg-secondary: #2c2c2e;
+  --bg-tertiary: #3a3a3c;
+  --text-primary: #e5e5ea;
+  --text-secondary: #98989d;
+  --text-tertiary: #636366;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.13);
+  --icon-filter: brightness(0);
+  --bg-icon: #98989d;
+  --icon-color: #1c1c1e;
 }
 
 /* ── BASE ── */

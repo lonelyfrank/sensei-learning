@@ -1,12 +1,17 @@
+import MugeiIcon from './icons/mugei.svg?react'
+import KohaiIcon from './icons/kohai.svg?react'
+import SenpaiIcon from './icons/senpai.svg?react'
+import ShinanIcon from './icons/shihan.svg?react'
+import SenseiIcon from './icons/sensei.svg?react'
 // Sistema XP e livelli di Sensei
 // Ogni step completato dà XP, i livelli sbloccano titoli in stile arti marziali
 
 export const LEVELS = [
-  { name: 'Mugei',   kanji: '無芸', min: 0,    max: 99,       color: '#a0a0a0', desc: 'Nessuna arte — il viaggio inizia' },
-  { name: 'Kohai',   kanji: '後輩', min: 100,  max: 299,      color: '#378ADD', desc: 'Allievo junior — stai imparando' },
-  { name: 'Senpai',  kanji: '先輩', min: 300,  max: 599,      color: '#7F77DD', desc: 'Allievo senior — la disciplina cresce' },
-  { name: 'Shihan',  kanji: '師範', min: 600,  max: 999,      color: '#1D9E75', desc: 'Maestro istruttore — guidi gli altri' },
-  { name: 'Sensei',  kanji: '先生', min: 1000, max: Infinity, color: '#f7c948', desc: 'Il maestro — hai padroneggiato la via' },
+  { name: 'Mugei',  kanji: '無芸', min: 0,    max: 99,       color: '#a0a0a0', desc: 'Nessuna arte — il viaggio inizia',      Icon: MugeiIcon  },
+  { name: 'Kohai',  kanji: '後輩', min: 100,  max: 299,      color: '#378ADD', desc: 'Allievo junior — stai imparando',       Icon: KohaiIcon  },
+  { name: 'Senpai', kanji: '先輩', min: 300,  max: 599,      color: '#7F77DD', desc: 'Allievo senior — la disciplina cresce', Icon: SenpaiIcon },
+  { name: 'Shihan', kanji: '師範', min: 600,  max: 999,      color: '#1D9E75', desc: 'Maestro istruttore — guidi gli altri',  Icon: ShinanIcon },
+  { name: 'Sensei', kanji: '先生', min: 1000, max: Infinity, color: '#f7c948', desc: 'Il maestro — hai padroneggiato la via', Icon: SenseiIcon },
 ]
 
 // Calcola XP totali dai progressi
