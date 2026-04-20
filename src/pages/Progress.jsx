@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import LevelCard from '../progress/LevelCard.jsx'
+import BadgesSection from '../progress/BadgesSection.jsx'
+import { calculateXP } from '../progress/xpSystem.jsx'
 
 function Progress({ onBack, courses }) {
-
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
@@ -9,7 +11,6 @@ function Progress({ onBack, courses }) {
   }, [])
 
   const loadStats = async () => {
-    // Carica i progressi di tutti i sentieri
     const allProgress = await Promise.all(
       courses.map(async course => {
         const progress = await window.sensei.getProgress(course.id)
@@ -17,38 +18,30 @@ function Progress({ onBack, courses }) {
       })
     )
 
-    // Totale giorni completati
     const totalCompleted = allProgress.reduce((acc, { progress }) =>
       acc + progress.filter(p => p.completed).length, 0)
 
-    // Sentieri attivi
-    const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100)
+    const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100).length
+    const completedCourses = courses.filter(c => c.progress === 100).length
 
-    // Sentieri completati
-    const completedCourses = courses.filter(c => c.progress === 100)
-
-    // Ultimo accesso — il timestamp più recente tra tutti i progressi
     const allTimestamps = allProgress
       .flatMap(({ progress }) => progress
         .filter(p => p.completed && p.completed_at)
         .map(p => p.completed_at)
       )
-    const lastActivity = allTimestamps.length > 0 ? Math.max(...allTimestamps) : null
 
-    // Streak — giorni consecutivi (basato sui completed_at)
     const streak = calculateStreak(allTimestamps)
-
-    // Attività per giorno — ultimi 30 giorni
     const activity = calculateActivity(allTimestamps, 30)
+    const xp = calculateXP(allProgress, courses)
 
     setStats({
       totalCompleted,
-      activeCourses: activeCourses.length,
-      completedCourses: completedCourses.length,
+      activeCourses,
+      completedCourses,
       totalCourses: courses.length,
-      lastActivity,
       streak,
       activity,
+      xp,
       allProgress,
     })
   }
@@ -56,8 +49,8 @@ function Progress({ onBack, courses }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+      {/* ── HEADER ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
         <button
           onClick={onBack}
           style={{
@@ -81,13 +74,19 @@ function Progress({ onBack, courses }) {
         <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>Caricamento...</p>
       ) : (
         <>
-          {/* ── STATS CARDS ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 32 }}>
-            <StatCard label="Giorni completati" value={stats.totalCompleted} color="#378ADD" />
+          {/* ── LEVEL CARD ── */}
+          <LevelCard xp={stats.xp} />
+
+          {/* ── STATS CARD ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 32 }}>
+            <StatCard label="Step completati" value={stats.totalCompleted} color="#378ADD" />
             <StatCard label="Sentieri attivi" value={stats.activeCourses} color="#7F77DD" />
-            <StatCard label="Sentieri completati" value={stats.completedCourses} color="#1D9E75" />
-            <StatCard label="Streak attuale" value={`${stats.streak}gg`} color="#D85A30" />
+            <StatCard label="Completati" value={stats.completedCourses} color="#1D9E75" />
+            <StatCard label="Streak" value={`${stats.streak}gg`} color="#D85A30" />
           </div>
+
+          {/* ── BADGE ── */}
+          <BadgesSection stats={stats} />
 
           {/* ── GRAFICO ATTIVITÀ ── */}
           <div style={{ marginBottom: 32 }}>
@@ -110,6 +109,7 @@ function Progress({ onBack, courses }) {
                 const lastDone = progress
                   .filter(p => p.completed && p.completed_at)
                   .sort((a, b) => b.completed_at - a.completed_at)[0]
+
                 return (
                   <div key={course.id} style={{
                     padding: '14px 16px',
@@ -118,13 +118,21 @@ function Progress({ onBack, courses }) {
                     border: '0.5px solid var(--border)',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{course.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Pallino colore sentiero */}
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: course.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{course.name}</span>
+                      </div>
                       <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        {completed} / {total} giorni · {pct}%
+                        {completed} / {total} step · {pct}%
                       </span>
                     </div>
                     <div style={{ height: 4, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: course.color, borderRadius: 2, transition: 'width 0.5s ease' }} />
+                      <div style={{
+                        width: `${pct}%`, height: '100%',
+                        background: pct === 100 ? '#1D9E75' : course.color,
+                        borderRadius: 2, transition: 'width 0.5s ease',
+                      }} />
                     </div>
                     {lastDone && (
                       <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-tertiary)' }}>
@@ -154,24 +162,24 @@ function StatCard({ label, value, color }) {
       <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </p>
-      <p style={{ margin: 0, fontSize: 28, fontWeight: 500, color }}>
+      <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color }}>
         {value}
       </p>
     </div>
   )
 }
 
-/* Grafico attività — griglia di quadratini come GitHub */
+/* Grafico attività stile GitHub */
 function ActivityGraph({ activity }) {
   return (
-    <div style={{ display: 'flex', gap: 3, marginTop: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 4, marginTop: 12, flexWrap: 'wrap' }}>
       {activity.map((day, i) => (
         <div
           key={i}
-          title={`${day.date}: ${day.count} giorni`}
+          title={`${day.date}: ${day.count} step`}
           style={{
-            width: 14, height: 14,
-            borderRadius: 3,
+            width: 16, height: 16,
+            borderRadius: 4,
             background: day.count === 0
               ? 'var(--bg-tertiary)'
               : day.count === 1
@@ -179,7 +187,11 @@ function ActivityGraph({ activity }) {
                 : day.count === 2
                   ? '#378ADD88'
                   : '#378ADD',
+            transition: 'transform 0.1s',
+            cursor: day.count > 0 ? 'pointer' : 'default',
           }}
+          onMouseEnter={e => { if (day.count > 0) e.currentTarget.style.transform = 'scale(1.2)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         />
       ))}
     </div>
@@ -200,10 +212,8 @@ function calculateStreak(timestamps) {
   for (const day of days) {
     const d = new Date(day)
     const diff = Math.round((current - d) / (1000 * 60 * 60 * 24))
-    if (diff <= 1) {
-      streak++
-      current = d
-    } else break
+    if (diff <= 1) { streak++; current = d }
+    else break
   }
   return streak
 }
