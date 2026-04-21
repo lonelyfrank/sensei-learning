@@ -50,8 +50,29 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
   fs.copyFileSync(filePath, destPath)
 
   const code = fs.readFileSync(filePath, 'utf-8')
-  const dayNums = [...code.matchAll(/\{\s*day\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
-  const totalDays = dayNums.length > 0 ? Math.max(...dayNums) : 30
+
+  // ── RILEVAMENTO AUTOMATICO NUMERO DI STEP ──
+  // I sentieri possono usare { id: N } o { day: N } per identificare gli step.
+  // Cerchiamo entrambi i pattern e prendiamo il valore massimo trovato.
+  //
+  // Pattern 1: { id: N } — tipico dei sentieri moderni generati da Claude
+  // Usa un lookahead per evitare falsi positivi su altri id (es. courseId, userId)
+  // cercando solo id che appaiono subito dopo [ o { o virgola — ovvero dentro array di oggetti
+  const stepIds = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)]
+    .map(m => parseInt(m[1]))
+    .filter(n => !isNaN(n))
+
+  // Pattern 2: { day: N } — usato dai sentieri con struttura a giorni
+  const dayNums = [...code.matchAll(/\bday\s*:\s*(\d+)/g)]
+    .map(m => parseInt(m[1]))
+    .filter(n => !isNaN(n))
+
+  // Unisce i risultati di entrambi i pattern
+  const allNums = [...stepIds, ...dayNums]
+
+  // Se non trova nulla, fallback a 30 (valore di sicurezza)
+  const totalDays = allNums.length > 0 ? Math.max(...allNums) : 30
+
   const name = customName || courseId
 
   db.prepare(`
@@ -123,43 +144,50 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
       updated_at = excluded.updated_at
   `).run(courseId, key, value)
 
-  // Sincronizza i progressi in base al contenuto salvato
-try {
-  const parsed = JSON.parse(value)
+  // ── SINCRONIZZAZIONE PROGRESSI ──
+  // Quando un sentiero salva dati nello storage, proviamo a sincronizzare
+  // i progressi nel DB in modo che Sensei possa tracciare il completamento.
+  // Supporta due formati:
+  //   1. Valore diretto: { "1": true, "2": false, ... }
+  //   2. Annidato: { completed: { "1": true, ... }, ... }
+  try {
+    const parsed = JSON.parse(value)
 
-  const upsert = db.prepare(`
-    INSERT INTO progress (course_id, day_id, completed, completed_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(course_id, day_id) DO UPDATE SET
-      completed = excluded.completed,
-      completed_at = excluded.completed_at
-  `)
+    const upsert = db.prepare(`
+      INSERT INTO progress (course_id, day_id, completed, completed_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(course_id, day_id) DO UPDATE SET
+        completed = excluded.completed,
+        completed_at = excluded.completed_at
+    `)
 
-  // Funzione helper per sincronizzare un oggetto { "1": true, "2": false, ... }
-  const syncCompletedObject = (obj) => {
-    if (typeof obj !== 'object' || Array.isArray(obj)) return false
-    const entries = Object.entries(obj)
-    // Verifica che sia un oggetto con chiavi numeriche e valori booleani
-    const isCompletedMap = entries.length > 0 && entries.every(([k, v]) =>
-      !isNaN(parseInt(k)) && typeof v === 'boolean'
-    )
-    if (!isCompletedMap) return false
-    for (const [dayId, completed] of entries) {
-      upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
+    // Helper: sincronizza un oggetto { "1": true, "2": false, ... }
+    // Verifica che le chiavi siano numeriche e i valori booleani prima di procedere
+    const syncCompletedObject = (obj) => {
+      if (typeof obj !== 'object' || Array.isArray(obj)) return false
+      const entries = Object.entries(obj)
+      const isCompletedMap = entries.length > 0 && entries.every(([k, v]) =>
+        !isNaN(parseInt(k)) && typeof v === 'boolean'
+      )
+      if (!isCompletedMap) return false
+      for (const [dayId, completed] of entries) {
+        upsert.run(courseId, parseInt(dayId), completed ? 1 : 0, completed ? Date.now() : null)
+      }
+      return true
     }
-    return true
-  }
 
-  // Prova direttamente il valore (es. key='completed' o key='python_ml_completed')
-  if (syncCompletedObject(parsed)) {
-    // sincronizzato
-  }
-  // Prova dentro una proprietà 'completed' (es. unity-progress)
-  else if (parsed?.completed) {
-    syncCompletedObject(parsed.completed)
-  }
+    // Prova formato diretto (es. key='completed')
+    if (syncCompletedObject(parsed)) {
+      // sincronizzato direttamente
+    }
+    // Prova formato annidato (es. { completed: { ... } })
+    else if (parsed?.completed) {
+      syncCompletedObject(parsed.completed)
+    }
 
-} catch (e) {}
+  } catch (e) {
+    // Il valore non è JSON valido — ignora silenziosamente
+  }
 
   return { key, value }
 })
