@@ -7,11 +7,12 @@ const { app } = require('electron')
 // Su Windows: %APPDATA%/sensei-learning/sensei.db
 // Su Mac: ~/Library/Application Support/sensei-learning/sensei.db
 const dbPath = path.join(app.getPath('userData'), 'sensei.db')
-
 const db = new Database(dbPath)
 
-// Crea le tabelle se non esistono ancora
+// ─── SCHEMA ──────────────────────────────────────────────────────────────────
+
 db.exec(`
+  -- Sentieri e leaflet importati dall'utente
   CREATE TABLE IF NOT EXISTS courses (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -19,9 +20,12 @@ db.exec(`
     total_days INTEGER DEFAULT 0,
     icon TEXT DEFAULT 'BookOpen',
     color TEXT DEFAULT '#378ADD',
-    added_at INTEGER DEFAULT (strftime('%s', 'now'))
+    added_at INTEGER DEFAULT (strftime('%s', 'now')),
+    -- Tipo di artifact: 'sentiero' (percorso progressivo) o 'leaflet' (documento consultabile)
+    type TEXT DEFAULT 'sentiero'
   );
 
+  -- Progressi per ogni step di ogni sentiero/leaflet
   CREATE TABLE IF NOT EXISTS progress (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id TEXT NOT NULL,
@@ -31,6 +35,7 @@ db.exec(`
     UNIQUE(course_id, day_id)
   );
 
+  -- Storage chiave-valore per ogni sentiero/leaflet (usato dagli artifact JSX)
   CREATE TABLE IF NOT EXISTS course_storage (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id TEXT NOT NULL,
@@ -40,6 +45,7 @@ db.exec(`
     UNIQUE(course_id, key)
   );
 
+  -- Profilo utente (singolo utente locale)
   CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY DEFAULT 1,
     name TEXT DEFAULT 'Utente',
@@ -48,5 +54,22 @@ db.exec(`
 
   INSERT OR IGNORE INTO user (id, name) VALUES (1, 'Utente');
 `)
+
+// ─── MIGRAZIONI ───────────────────────────────────────────────────────────────
+// Aggiunge colonne mancanti ai DB esistenti senza perdere dati.
+// Ogni migrazione è protetta da un try/catch — se la colonna esiste già, viene ignorata.
+
+const migrations = [
+  // v1.1 — aggiunge il tipo di artifact (sentiero/leaflet)
+  `ALTER TABLE courses ADD COLUMN type TEXT DEFAULT 'sentiero'`,
+]
+
+for (const migration of migrations) {
+  try {
+    db.exec(migration)
+  } catch (e) {
+    // Colonna già esistente — ignora
+  }
+}
 
 module.exports = db

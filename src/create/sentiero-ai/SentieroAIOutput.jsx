@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import { PROMPT_BASE } from './promptBase.js'
 
-/* Step 2 — mostra il prompt generato, permette di modificarlo e copiarlo */
-function PromptOutput({ userSection, setUserSection, onBack }) {
+function SentieroAIOutput({ promptBase, userSection, setUserSection, onBack }) {
   const [copied, setCopied] = useState(false)
 
-  const fullPrompt = `${PROMPT_BASE}\n\n${userSection}`
+  const fullPrompt = `${promptBase}\n\n${userSection}`
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullPrompt)
@@ -16,7 +14,7 @@ function PromptOutput({ userSection, setUserSection, onBack }) {
   return (
     <div>
 
-      {/* Specifiche tecniche Sensei — read only */}
+      {/* Specifiche tecniche — read only */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div>
@@ -41,15 +39,15 @@ function PromptOutput({ userSection, setUserSection, onBack }) {
           maxHeight: 180, overflowY: 'auto',
           whiteSpace: 'pre-wrap', opacity: 0.7,
         }}>
-          {PROMPT_BASE}
+          {promptBase}
         </div>
       </div>
 
-      {/* Sezione personale — editabile dall'utente */}
+      {/* Sezione personale — editabile */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-            Il tuo sentiero
+            Il tuo artifact
           </span>
           <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 8 }}>
             — puoi modificare
@@ -109,4 +107,4 @@ function PromptOutput({ userSection, setUserSection, onBack }) {
   )
 }
 
-export default PromptOutput
+export default SentieroAIOutput

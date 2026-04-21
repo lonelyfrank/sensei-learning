@@ -6,6 +6,8 @@ const ThemeContext = createContext()
 export const THEMES_SYSTEM = [
   { id: 'light',    label: 'Light',    preview: ['#ffffff', '#f5f5f4', '#1a1a1a'] },
   { id: 'dark',     label: 'Dark',     preview: ['#1a1a1a', '#242424', '#f0f0f0'] },
+  { id: 'sensei',     label: 'Sensei',     preview: ['#0A1628', '#1F2E3F', '#CAF0F8'] },
+  { id: 'sensei-light',     label: 'Sensei Light',     preview: ['#CAF0F8', '#B5D8E1', '#0A1628'] },
 ]
 
 // Temi personalizzati
@@ -20,9 +22,12 @@ export const THEMES_CUSTOM = [
   { id: 'sakura',   label: 'Sakura',   preview: ['#fff0f5', '#ffe4ef', '#4a1228'] },
   { id: 'rose',     label: 'Rose',     preview: ['#fff5f7', '#ffe4e8', '#1a0a0e'] },
   { id: 'graphite', label: 'Graphite', preview: ['#1c1c1e', '#2c2c2e', '#e5e5ea'] },
-  { id: 'avocado', label: 'Avocado', preview: ['#344640', '#3B5249', '#BEC5AD'] },
+  { id: 'avocado', label: 'Avocado', preview: ['#132A13', '#31572C', '#ECF39E'] },
   { id: 'artic', label: 'Artic', preview: ['#CAF0F8', '#ADE8F4', '#023E8A'] },
   { id: 'aqua', label: 'Aqua', preview: ['#C4FFF9', '#9CEAEF', '#023E8A'] },
+  { id: 'chery', label: 'Chery', preview: ['#FAE0E4', '#F7CAD0', '#FF0A54'] },
+  { id: 'grass', label: 'Grass', preview: ['#AAD576', '#73A942', '#143601'] },
+  { id: 'pine', label: 'Pine', preview: ['#333D29', '#414833', '#C2C5AA'] },
 ]
 
 // Tutti i temi combinati

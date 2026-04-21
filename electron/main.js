@@ -12,7 +12,6 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
-    // Rimuove la toolbar nativa di Electron
     frame: false,
     titleBarStyle: 'hidden',
     icon: path.join(__dirname, '../public/sensei-logo.png'),
@@ -36,10 +35,89 @@ function createWindow() {
 ipcMain.handle('open-file-dialog', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Sentieri Sensei', extensions: ['jsx'] }],
+    filters: [{ name: 'Artifact Sensei', extensions: ['jsx'] }],
   })
   return result
 })
+
+// ── RILEVAMENTO TIPO E STEP ──────────────────────────────────────────────────
+// Analizza il codice JSX e restituisce { type, totalSteps }
+// Sistema a cascata con 5 livelli di fallback:
+//   1. SENSEI_TYPE + SENSEI_STEPS — variabili esplicite generate da Sensei
+//   2. Array named — conta elementi in STEPS, DAYS, LESSONS, RECIPES, ecc.
+//   3. Keywords — parole chiave nel testo per inferire il tipo
+//   4. Regex id/day — conta step numerati nel codice
+//   5. Default — sentiero con 30 step
+
+function detectArtifactMeta(code) {
+
+  // ── LIVELLO 1: variabili esplicite Sensei ──
+  const typeMatch = code.match(/export\s+const\s+SENSEI_TYPE\s*=\s*['"](\w+)['"]/)
+  const stepsMatch = code.match(/export\s+const\s+SENSEI_STEPS\s*=\s*(\d+)/)
+
+  if (typeMatch && stepsMatch) {
+    return {
+      type: typeMatch[1] === 'leaflet' ? 'leaflet' : 'sentiero',
+      totalSteps: parseInt(stepsMatch[1]),
+    }
+  }
+
+  // ── LIVELLO 2: array named — cerca array di oggetti comuni ──
+  // Supporta: STEPS, DAYS, LESSONS, CHAPTERS, RECIPES, INGREDIENTS, MODULES, TASKS
+  const arrayPatterns = [
+    /const\s+STEPS\s*=\s*\[/,
+    /const\s+DAYS\s*=\s*\[/,
+    /const\s+LESSONS\s*=\s*\[/,
+    /const\s+CHAPTERS\s*=\s*\[/,
+    /const\s+MODULES\s*=\s*\[/,
+    /const\s+TASKS\s*=\s*\[/,
+    /const\s+RECIPES\s*=\s*\[/,
+    /const\s+INGREDIENTS\s*=\s*\[/,
+    /const\s+steps\s*=\s*\[/,
+    /const\s+days\s*=\s*\[/,
+  ]
+
+  // Cerca il nome dell'array per contarne gli elementi
+  const namedArrayMatch = code.match(/const\s+(STEPS|DAYS|LESSONS|CHAPTERS|MODULES|TASKS|RECIPES|steps|days|lessons)\s*=\s*\[/)
+  if (namedArrayMatch) {
+    // Conta le occorrenze di { id: N } o { day: N } dentro l'array
+    const idMatches = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
+    const dayMatches = [...code.matchAll(/\bday\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
+    const allNums = [...idMatches, ...dayMatches].filter(n => !isNaN(n))
+    const totalSteps = allNums.length > 0 ? Math.max(...allNums) : allNums.length
+
+    // Inferisce il tipo dal nome dell'array
+    const arrName = namedArrayMatch[1].toLowerCase()
+    const isLeafletArray = ['recipes', 'ingredients'].includes(arrName)
+    const isSentieroArray = ['days', 'lessons', 'chapters', 'modules'].includes(arrName)
+
+    if (isLeafletArray) return { type: 'leaflet', totalSteps }
+    if (isSentieroArray) return { type: 'sentiero', totalSteps }
+    // STEPS e steps sono ambigui — continua con keywords
+  }
+
+  // ── LIVELLO 3: keywords nel testo ──
+  const codeLower = code.toLowerCase()
+
+  const leafletKeywords = ['ricetta', 'recipe', 'ingredienti', 'ingredients', 'configuraz', 'guida rapida', 'quick guide', 'scheda', 'reference']
+  const sentieroKeywords = ['giorni', 'settimane', 'programma', 'percorso', 'challenge', 'curriculum', 'formazione', 'corso']
+
+  const leafletScore = leafletKeywords.filter(k => codeLower.includes(k)).length
+  const sentieroScore = sentieroKeywords.filter(k => codeLower.includes(k)).length
+
+  // ── LIVELLO 4: regex id/day — conteggio step ──
+  const stepIds = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
+  const dayNums = [...code.matchAll(/\bday\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
+  const allNums = [...stepIds, ...dayNums]
+  const totalSteps = allNums.length > 0 ? Math.max(...allNums) : 30
+
+  // Determina il tipo in base al punteggio keywords
+  if (leafletScore > sentieroScore) return { type: 'leaflet', totalSteps }
+  if (sentieroScore > leafletScore) return { type: 'sentiero', totalSteps }
+
+  // ── LIVELLO 5: default ──
+  return { type: 'sentiero', totalSteps }
+}
 
 // Copia il file scelto nella cartella /courses e lo registra nel database
 ipcMain.handle('import-course', async (event, filePath, customName, icon, color) => {
@@ -51,44 +129,25 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
 
   const code = fs.readFileSync(filePath, 'utf-8')
 
-  // ── RILEVAMENTO AUTOMATICO NUMERO DI STEP ──
-  // I sentieri possono usare { id: N } o { day: N } per identificare gli step.
-  // Cerchiamo entrambi i pattern e prendiamo il valore massimo trovato.
-  //
-  // Pattern 1: { id: N } — tipico dei sentieri moderni generati da Claude
-  // Usa un lookahead per evitare falsi positivi su altri id (es. courseId, userId)
-  // cercando solo id che appaiono subito dopo [ o { o virgola — ovvero dentro array di oggetti
-  const stepIds = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)]
-    .map(m => parseInt(m[1]))
-    .filter(n => !isNaN(n))
-
-  // Pattern 2: { day: N } — usato dai sentieri con struttura a giorni
-  const dayNums = [...code.matchAll(/\bday\s*:\s*(\d+)/g)]
-    .map(m => parseInt(m[1]))
-    .filter(n => !isNaN(n))
-
-  // Unisce i risultati di entrambi i pattern
-  const allNums = [...stepIds, ...dayNums]
-
-  // Se non trova nulla, fallback a 30 (valore di sicurezza)
-  const totalDays = allNums.length > 0 ? Math.max(...allNums) : 30
+  // Rileva tipo e numero di step con il sistema a cascata
+  const { type, totalSteps } = detectArtifactMeta(code)
 
   const name = customName || courseId
 
   db.prepare(`
-    INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(courseId, name, filename, totalDays, icon || 'BookOpen', color || '#378ADD')
+    INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(courseId, name, filename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
 
-  return { success: true, courseId, totalDays }
+  return { success: true, courseId, totalSteps, type }
 })
 
-// Legge tutti i sentieri registrati nel database
+// Legge tutti gli artifact registrati nel database
 ipcMain.handle('get-courses', () => {
   return db.prepare('SELECT * FROM courses ORDER BY added_at DESC').all()
 })
 
-// Legge il contenuto raw di un file sentiero
+// Legge il contenuto raw di un file artifact
 ipcMain.handle('read-course-file', (event, filename) => {
   const filePath = path.join(app.getAppPath(), 'courses', filename)
   if (!fs.existsSync(filePath)) return null
@@ -102,7 +161,7 @@ ipcMain.handle('get-lucide-bundle', () => {
   return fs.readFileSync(filePath, 'utf-8')
 })
 
-// Salva o aggiorna il progresso di un giorno
+// Salva o aggiorna il progresso di un giorno/step
 ipcMain.handle('save-progress', (event, courseId, dayId, completed) => {
   db.prepare(`
     INSERT INTO progress (course_id, day_id, completed, completed_at)
@@ -114,27 +173,28 @@ ipcMain.handle('save-progress', (event, courseId, dayId, completed) => {
   return { success: true }
 })
 
-// Legge tutti i progressi di un sentiero
+// Legge tutti i progressi di un artifact
 ipcMain.handle('get-progress', (event, courseId) => {
   return db.prepare('SELECT * FROM progress WHERE course_id = ?').all(courseId)
 })
 
-// Rimuove un sentiero dal database e cancella il file dalla cartella courses
+// Rimuove un artifact dal database e cancella il file dalla cartella courses
 ipcMain.handle('remove-course', (event, courseId, filename) => {
   const filePath = path.join(app.getAppPath(), 'courses', filename)
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
   db.prepare('DELETE FROM progress WHERE course_id = ?').run(courseId)
+  db.prepare('DELETE FROM course_storage WHERE course_id = ?').run(courseId)
   db.prepare('DELETE FROM courses WHERE id = ?').run(courseId)
   return { success: true }
 })
 
-// Legge un valore dallo storage del sentiero
+// Legge un valore dallo storage dell'artifact
 ipcMain.handle('storage-get', (event, courseId, key) => {
   const row = db.prepare('SELECT value FROM course_storage WHERE course_id = ? AND key = ?').get(courseId, key)
   return row ? { key, value: row.value } : null
 })
 
-// Scrive un valore nello storage del sentiero e sincronizza i progressi
+// Scrive un valore nello storage dell'artifact e sincronizza i progressi
 ipcMain.handle('storage-set', (event, courseId, key, value) => {
   db.prepare(`
     INSERT INTO course_storage (course_id, key, value, updated_at)
@@ -145,8 +205,6 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
   `).run(courseId, key, value)
 
   // ── SINCRONIZZAZIONE PROGRESSI ──
-  // Quando un sentiero salva dati nello storage, proviamo a sincronizzare
-  // i progressi nel DB in modo che Sensei possa tracciare il completamento.
   // Supporta due formati:
   //   1. Valore diretto: { "1": true, "2": false, ... }
   //   2. Annidato: { completed: { "1": true, ... }, ... }
@@ -162,7 +220,6 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
     `)
 
     // Helper: sincronizza un oggetto { "1": true, "2": false, ... }
-    // Verifica che le chiavi siano numeriche e i valori booleani prima di procedere
     const syncCompletedObject = (obj) => {
       if (typeof obj !== 'object' || Array.isArray(obj)) return false
       const entries = Object.entries(obj)
@@ -176,11 +233,11 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
       return true
     }
 
-    // Prova formato diretto (es. key='completed')
+    // Prova formato diretto
     if (syncCompletedObject(parsed)) {
       // sincronizzato direttamente
     }
-    // Prova formato annidato (es. { completed: { ... } })
+    // Prova formato annidato
     else if (parsed?.completed) {
       syncCompletedObject(parsed.completed)
     }
@@ -192,13 +249,13 @@ ipcMain.handle('storage-set', (event, courseId, key, value) => {
   return { key, value }
 })
 
-// Elimina un valore dallo storage del sentiero
+// Elimina un valore dallo storage dell'artifact
 ipcMain.handle('storage-delete', (event, courseId, key) => {
   db.prepare('DELETE FROM course_storage WHERE course_id = ? AND key = ?').run(courseId, key)
   return { key, deleted: true }
 })
 
-// Lista tutte le chiavi dello storage del sentiero
+// Lista tutte le chiavi dello storage dell'artifact
 ipcMain.handle('storage-list', (event, courseId, prefix) => {
   const rows = prefix
     ? db.prepare('SELECT key FROM course_storage WHERE course_id = ? AND key LIKE ?').all(courseId, `${prefix}%`)

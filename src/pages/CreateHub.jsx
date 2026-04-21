@@ -1,15 +1,27 @@
+// ─── CreateHub.jsx ───────────────────────────────────────────────────────────
+// Landing page della sezione Crea — mostra le modalità disponibili e future
+
 import React from 'react'
 
+// Modalità di creazione attualmente disponibili
 const MODES_AVAILABLE = [
   {
-    id: 'ai',
-    icon: '✦',
-    title: 'Crea con AI',
-    description: 'Genera un prompt ottimizzato per Claude e ottieni il tuo sentiero personalizzato in pochi minuti.',
+    id: 'sentiero-ai',
+    icon: '🗺️',
+    title: 'Sentiero con AI',
+    description: 'Genera un prompt ottimizzato per Claude e crea un percorso progressivo da seguire nel tempo.',
     color: '#378ADD',
+  },
+  {
+    id: 'leaflet-ai',
+    icon: '📄',
+    title: 'Leaflet con AI',
+    description: 'Genera un prompt per creare una guida, ricetta o scheda tecnica da consultare in qualsiasi momento.',
+    color: '#1D9E75',
   },
 ]
 
+// Modalità in arrivo — mostrate disabilitate per anticipare le feature future
 const MODES_SOON = [
   {
     id: 'template',
@@ -22,7 +34,7 @@ const MODES_SOON = [
     id: 'editor',
     icon: '✎',
     title: 'Editor visuale',
-    description: 'Crea il tuo sentiero direttamente nell\'app con un editor drag & drop.',
+    description: 'Crea il tuo artifact direttamente nell\'app con un editor drag & drop.',
     color: '#D85A30',
   },
 ]
@@ -31,7 +43,7 @@ function CreateHub({ onBack, onSelectMode }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
-      {/* Header */}
+      {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
         <button
           onClick={onBack}
@@ -52,19 +64,23 @@ function CreateHub({ onBack, onSelectMode }) {
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Crea</h1>
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>
-            Scegli come vuoi creare il tuo sentiero
+            Scegli come vuoi creare il tuo artifact
           </p>
         </div>
       </div>
 
-      {/* Modalità disponibili */}
+      {/* ── MODALITÀ DISPONIBILI ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12, marginBottom: 32 }}>
         {MODES_AVAILABLE.map(mode => (
-          <ModeCard key={mode.id} mode={mode} onClick={() => onSelectMode(mode.id)} />
+          <ModeCard
+            key={mode.id}
+            mode={mode}
+            onClick={() => onSelectMode(mode.id)}
+          />
         ))}
       </div>
 
-      {/* Divisore — prossimamente */}
+      {/* ── DIVISORE PROSSIMAMENTE ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <div style={{ flex: 1, height: '0.5px', background: 'var(--border)' }} />
         <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -73,7 +89,7 @@ function CreateHub({ onBack, onSelectMode }) {
         <div style={{ flex: 1, height: '0.5px', background: 'var(--border)' }} />
       </div>
 
-      {/* Modalità future */}
+      {/* ── MODALITÀ FUTURE — disabilitate ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
         {MODES_SOON.map(mode => (
           <ModeCard key={mode.id} mode={mode} soon />
@@ -84,6 +100,7 @@ function CreateHub({ onBack, onSelectMode }) {
   )
 }
 
+// Card singola modalità — cliccabile o disabilitata (soon)
 function ModeCard({ mode, onClick, soon }) {
   const [hovered, setHovered] = React.useState(false)
 
@@ -102,7 +119,7 @@ function ModeCard({ mode, onClick, soon }) {
         transition: 'all 0.15s',
       }}
     >
-      {/* Icona */}
+      {/* Icona modalità */}
       <div style={{
         width: 40, height: 40, borderRadius: 10,
         background: mode.color + '18',
@@ -114,6 +131,7 @@ function ModeCard({ mode, onClick, soon }) {
         {mode.icon}
       </div>
 
+      {/* Titolo e descrizione */}
       <h3 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
         {mode.title}
       </h3>

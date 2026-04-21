@@ -53,13 +53,20 @@ function Course({ course, onBack, onProgressUpdate }) {
     }
   }
 
-  // Trasforma il codice JSX del sentiero per renderlo compatibile con l'iframe
+  // Trasforma il codice JSX dell'artifact per renderlo compatibile con l'iframe Babel
   const transformCode = (code) => {
     // Tiene traccia di quali builtin sono stati usati come icone Lucide
     const builtinsUsedAsIcons = new Set()
 
     let transformed = code
-      // Rimuove import React — già disponibile globalmente
+      // ── METADATI SENSEI ──
+      // Rimuove le variabili di identificazione Sensei — non compatibili con Babel in-browser
+      // export const SENSEI_TYPE = 'sentiero' → // SENSEI_TYPE removed
+      .replace(/^export\s+const\s+SENSEI_TYPE\s*=.*$/gm, '// SENSEI_TYPE removed')
+      .replace(/^export\s+const\s+SENSEI_STEPS\s*=.*$/gm, '// SENSEI_STEPS removed')
+
+      // ── IMPORT REACT ──
+      // Rimuove import React — già disponibile globalmente nell'iframe
       .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
       // Rimuove import di hook React — già destrutturati globalmente
       .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
@@ -70,7 +77,9 @@ function Course({ course, onBack, onProgressUpdate }) {
       )
       // Rimuove import react-dom — già disponibile globalmente
       .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
-      // Converte import lucide-react in riferimenti al bundle locale
+
+      // ── IMPORT LUCIDE ──
+      // Converte import lucide-react in riferimenti al bundle locale (_lucide)
       // Gestisce anche icone che collidono con built-in JS (es. Map, Set)
       .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
         imports.split(',').map(i => {
@@ -83,20 +92,25 @@ function Course({ course, onBack, onProgressUpdate }) {
             builtinsUsedAsIcons.add(alias)
             const safeName = `_${alias}Icon`
             // Dichiara solo il safe name — l'alias originale NON viene ridichiarato
-            // per non sovrascrivere il builtin JS
+            // per non sovrascrivere il builtin JS nativo
             return `const ${safeName} = _lucide['${original}'] || (() => null)`
           }
 
           return `const ${alias} = _lucide['${original}'] || (() => null)`
         }).join('\n')
       )
-      // Rimuove tutti gli altri import rimasti
+
+      // ── ALTRI IMPORT ──
+      // Rimuove tutti gli altri import rimasti (es. librerie non supportate)
       .replace(/^import\s+.*$/gm, '// import removed')
-      // Sostituisce export default con variabile locale
+
+      // ── EXPORT ──
+      // Sostituisce export default con variabile locale usata da ReactDOM.render
       .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
 
+    // ── FIX BUILTIN COLLISION ──
     // Rinomina tutti gli usi degli alias builtin nel resto del codice
-    // sostituisce riferimenti JSX e come valore di proprietà
+    // per evitare che sovrascrivano i costruttori JS nativi
     builtinsUsedAsIcons.forEach(name => {
       const safeName = `_${name}Icon`
       // <Map ... /> → <_MapIcon ... />
@@ -191,7 +205,7 @@ function Course({ course, onBack, onProgressUpdate }) {
 <body>
   <div id="root"></div>
 
-  <!-- STEP 9: Esegue il codice del sentiero transpilato da Babel -->
+  <!-- STEP 9: Esegue il codice dell'artifact transpilato da Babel -->
   <script type="text/babel" data-presets="react">
     // Ripristina Map/Set nativi nel contesto Babel
     window.Map = __nativeMap
@@ -211,7 +225,7 @@ function Course({ course, onBack, onProgressUpdate }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* ── TOOLBAR SENTIERO ── */}
+      {/* ── TOOLBAR ARTIFACT ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '0 20px', height: 52,
@@ -243,17 +257,17 @@ function Course({ course, onBack, onProgressUpdate }) {
         </div>
       </div>
 
-      {/* ── CONTENUTO SENTIERO ── */}
+      {/* ── CONTENUTO ARTIFACT ── */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {error && (
           <div style={{ padding: 32, color: '#E24B4A', fontSize: 13, textAlign: 'center' }}>
-            <p>Errore nel caricamento del sentiero.</p>
+            <p>Errore nel caricamento dell'artifact.</p>
             <p style={{ color: 'var(--text-tertiary)', marginTop: 8, fontSize: 12 }}>{error}</p>
           </div>
         )}
         {!error && (!courseCode || !lucideBundle) && (
           <div style={{ padding: 32, color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center' }}>
-            Caricamento sentiero...
+            Caricamento...
           </div>
         )}
         {!error && courseCode && lucideBundle && (

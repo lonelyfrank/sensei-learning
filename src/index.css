@@ -49,6 +49,38 @@
   
 }
 
+/* sensei */
+.theme-sensei {
+  --bg-primary: #0A1628;
+  --bg-secondary: #1F2E3F;
+  --bg-tertiary: #354656;
+  --text-primary: #CAF0F8;
+  --text-secondary: #B5D8E1;
+  --text-tertiary: #9FC0CA;
+  --border: rgba(202, 240, 248, 0.08);
+  --border-hover: rgba(202, 240, 248, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #CAF0F8;
+  --icon-color: #0A1628;
+  
+}
+
+/* sensei */
+.theme-sensei-light {
+  --bg-primary: #CAF0F8;
+  --bg-secondary: #B5D8E1;
+  --bg-tertiary: #9FC0CA;
+  --text-primary: #1F2E3F;
+  --text-secondary: #354656;
+  --text-tertiary: #4A5F6D;
+  --border: rgba(10, 22, 40, 0.08);
+  --border-hover: rgba(10, 22, 40, 0.15);
+  --icon-filter: brightness(0);
+  --bg-icon: #CAF0F8;
+  --icon-color: #0A1628;
+  
+}
+
 /* Midnight — blu notte profondo */
 .theme-midnight {
   --bg-primary: #0a0f1e;
@@ -201,17 +233,17 @@
 
 /* Avocado — verde soft */
 .theme-avocado {
-  --bg-primary: #344640;
-  --bg-secondary: #3B5249;
-  --bg-tertiary: #13533a;
-  --text-primary: #BEC5AD;
-  --text-secondary: #A4B494;
-  --text-tertiary: #8EA37B;
-  --border: rgba(72, 187, 120, 0.1);
-  --border-hover: rgba(72, 187, 120, 0.2);
+  --bg-primary: #132A13;
+  --bg-secondary: #31572C;
+  --bg-tertiary: #40672D;
+  --text-primary: #ECF39E;
+  --text-secondary: #D5E18C;
+  --text-tertiary: #BECE7A;
+  --border: rgba(236, 243, 158, 0.1);
+  --border-hover: rgba(236, 243, 158, 0.2);
   --icon-filter: brightness(0);
-  --bg-icon: #A4B494;
-  --icon-color: #34252F;
+  --bg-icon: #ECF39E;
+  --icon-color: #132A13;
 }
 
 /* Artic — glaciale chiaro */
@@ -242,6 +274,51 @@
   --icon-filter: brightness(0);
   --bg-icon: #C4FFF9;
   --icon-color: #1D4E89;
+}
+
+/* Cherry — fioritura di ciliegio */
+.theme-chery {
+  --bg-primary: #FAE0E4;
+  --bg-secondary: #F7CAD0;
+  --bg-tertiary: #FF99AC;
+  --text-primary: #FF0A54;
+  --text-secondary: #FF477E;
+  --text-tertiary: #FF5C8A;
+  --border: rgba(255, 71, 126, 0.1);
+  --border-hover: rgba(255, 71, 126, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #FAE0E4;
+  --icon-color: #FF0A54;
+}
+
+/* Grass — Praterie verdi */
+.theme-grass {
+  --bg-primary: #AAD576;
+  --bg-secondary: #73A942;
+  --bg-tertiary: #538D22;
+  --text-primary: #143601;
+  --text-secondary: #1A4301;
+  --text-tertiary: #245501;
+  --border: rgba(20, 54, 1, 0.1);
+  --border-hover: rgba(20, 54, 1, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #AAD576;
+  --icon-color: #143601;
+}
+
+/* Pine — Foresta di pini */
+.theme-pine {
+  --bg-primary: #333D29;
+  --bg-secondary: #414833;
+  --bg-tertiary: #656D4A;
+  --text-primary: #C2C5AA;
+  --text-secondary: #B6AD90;
+  --text-tertiary: #A68A64;
+  --border: rgba(194, 197, 170, 0.1);
+  --border-hover: rgba(194, 197, 170, 0.2);
+  --icon-filter: brightness(0);
+  --bg-icon: #333D29;
+  --icon-color: #C2C5AA;
 }
 
 /* ── BASE ── */

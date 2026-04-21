@@ -3,7 +3,7 @@ import React from 'react'
 const LEVELS = ['Principiante', 'Intermedio', 'Avanzato']
 
 /* Step 1 — form per raccogliere i dati del sentiero */
-function PromptForm({ form, setForm, onGenerate }) {
+function SentieroAIForm({ form, setForm, onGenerate }) {
   const isValid = form.topic.trim() && form.days.toString().trim() && form.description.trim()
 
   return (
@@ -135,4 +135,4 @@ function PromptForm({ form, setForm, onGenerate }) {
   )
 }
 
-export default PromptForm
+export default SentieroAIForm

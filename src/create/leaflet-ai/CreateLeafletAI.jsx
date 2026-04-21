@@ -1,27 +1,24 @@
 import React, { useState } from 'react'
-import PromptForm from './PromptForm.jsx'
-import PromptOutput from './PromptOutput.jsx'
+import LeafletAIForm from './LeafletAIForm.jsx'
+import LeafletAIOutput from './LeafletAIOutput.jsx'
 
-/* Pagina Crea con AI — genera un prompt ottimizzato per Claude */
-function CreateWithAI({ onBack }) {
+/* Pagina Crea Leaflet con AI — genera un prompt ottimizzato per documenti consultabili */
+function CreateLeafletAI({ onBack }) {
   const [step, setStep] = useState('info')
   const [form, setForm] = useState({
     topic: '',
     type: '',
-    days: '',
-    level: 'Principiante',
+    steps: '',
     description: '',
   })
   const [userSection, setUserSection] = useState('')
 
-  // Genera la sezione personale dal form e passa allo step 2
   const handleGenerate = () => {
-    setUserSection(`## Il sentiero da creare
+    setUserSection(`## Il leaflet da creare
 
 **Argomento:** ${form.topic}
-**Tipo di sentiero:** ${form.type || 'Non specificato'}
-**Numero di step:** ${form.days}
-**Livello:** ${form.level}
+**Tipo:** ${form.type || 'Non specificato'}
+**Numero di passi:** ${form.steps || 'Non specificato'}
 **Descrizione e obiettivi:** ${form.description}`)
     setStep('output')
   }
@@ -48,16 +45,16 @@ function CreateWithAI({ onBack }) {
           Indietro
         </button>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Crea con AI</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Leaflet con AI</h1>
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>
-            Genera un prompt ottimizzato da dare a Claude
+            Genera un prompt ottimizzato per creare una guida, ricetta o scheda consultabile
           </p>
         </div>
       </div>
 
       {/* ── STEP 1: Form ── */}
       {step === 'info' && (
-        <PromptForm
+        <LeafletAIForm
           form={form}
           setForm={setForm}
           onGenerate={handleGenerate}
@@ -66,7 +63,7 @@ function CreateWithAI({ onBack }) {
 
       {/* ── STEP 2: Output ── */}
       {step === 'output' && (
-        <PromptOutput
+        <LeafletAIOutput
           userSection={userSection}
           setUserSection={setUserSection}
           onBack={() => setStep('info')}
@@ -77,4 +74,4 @@ function CreateWithAI({ onBack }) {
   )
 }
 
-export default CreateWithAI
+export default CreateLeafletAI
