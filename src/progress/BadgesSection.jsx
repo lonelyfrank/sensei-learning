@@ -11,7 +11,6 @@ function BadgesSection({ stats }) {
       <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Achievement
       </span>
-
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
         {unlocked.map(badge => (
           <BadgeCard key={badge.id} badge={badge} unlocked />
@@ -20,7 +19,6 @@ function BadgesSection({ stats }) {
           <BadgeCard key={badge.id} badge={badge} unlocked={false} />
         ))}
       </div>
-
       {unlocked.length === 0 && (
         <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 12 }}>
           Completa il tuo primo step per sbloccare i badge.
@@ -32,10 +30,23 @@ function BadgesSection({ stats }) {
 
 function BadgeCard({ badge, unlocked }) {
   const [hovered, setHovered] = React.useState(false)
+  const ref = React.useRef(null)
+  const [tooltipLeft, setTooltipLeft] = React.useState(0)
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      // Se il tooltip (180px) va fuori schermo a destra, allinealo a sinistra del badge
+      const wouldOverflow = rect.left + 180 > window.innerWidth - 16
+      setTooltipLeft(wouldOverflow ? -(180 - 64) : 0)
+    }
+    setHovered(true)
+  }
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
+      ref={ref}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative',
@@ -73,12 +84,12 @@ function BadgeCard({ badge, unlocked }) {
         {badge.name}
       </span>
 
-      {/* Tooltip — fuori dal div con opacity */}
+      {/* Tooltip — si adatta al bordo destro dello schermo */}
       {hovered && (
         <div style={{
           position: 'absolute',
           bottom: 'calc(100% + 8px)',
-          left: 0,
+          left: tooltipLeft,
           background: 'var(--bg-primary)',
           border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-md)',

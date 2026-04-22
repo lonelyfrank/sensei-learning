@@ -4,7 +4,10 @@ import { ICONS, GridIcon, PlusIcon, LibraryIcon, CreateIcon, SettingsIcon, Progr
 
 function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onImport, user, onOpenSettings, onOpenProgress }) {
 
-  const activeCourses = courses.filter(c => c.progress > 0 && c.progress < 100)
+  // Separa sentieri e leaflet — sezioni distinte nella sidebar
+  const activeSentieri = courses.filter(c => (c.type === 'sentiero' || !c.type) && c.progress > 0 && c.progress < 100)
+  const activeLeaflet = courses.filter(c => c.type === 'leaflet' && c.progress > 0)
+
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
   const initials = (user?.name || 'U')
@@ -62,39 +65,36 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
         <NavItem icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
       </div>
 
-      {/* ── IN CORSO ── */}
+      {/* ── IN CORSO — solo sentieri ── */}
       <div style={{ padding: '8px 16px 6px', flexShrink: 0 }}>
         <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In corso</span>
       </div>
 
-      <div style={{ padding: '0 8px', flex: 1, overflowY: 'auto' }}>
-        {activeCourses.length === 0 && (
+      <div style={{ padding: '0 8px', flexShrink: 0 }}>
+        {activeSentieri.length === 0 && (
           <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
         )}
-        {activeCourses.map(course => {
-          const Icon = course.icon ? ICONS[course.icon] : null
-          return (
-            <div
-              key={course.id}
-              onClick={() => onNavigate('course', course)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 2 }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ width: 20, height: 20, borderRadius: 5, background: course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {Icon
-                  ? <Icon size={12} color={course.color} />
-                  : <div style={{ width: 8, height: 8, borderRadius: 2, background: course.color }} />
-                }
-              </div>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                {course.name}
-              </span>
-              <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{course.progress}%</span>
-            </div>
-          )
-        })}
+        {activeSentieri.map(course => (
+          <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} />
+        ))}
       </div>
+
+      {/* ── LEAFLET ATTIVI — mostrati solo se ce ne sono ── */}
+      {activeLeaflet.length > 0 && (
+        <>
+          <div style={{ padding: '8px 16px 6px', flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaflet</span>
+          </div>
+          <div style={{ padding: '0 8px', flexShrink: 0 }}>
+            {activeLeaflet.map(course => (
+              <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} showProgress={false} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Spacer scrollabile */}
+      <div style={{ flex: 1, overflowY: 'auto' }} />
 
       {/* ── BOTTOM: Profilo + menu ── */}
       <div style={{ borderTop: '0.5px solid var(--border)', padding: '10px 8px', flexShrink: 0, position: 'relative' }}>
@@ -119,11 +119,41 @@ function Sidebar({ collapsed, onCollapse, onNavigate, currentView, courses, onIm
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Utente'}</p>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>{activeCourses.length} sentieri attivi</p>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
+              {activeSentieri.length} sentier{activeSentieri.length === 1 ? 'o' : 'i'} attiv{activeSentieri.length === 1 ? 'o' : 'i'}
+              {activeLeaflet.length > 0 && ` · ${activeLeaflet.length} leaflet`}
+            </p>
           </div>
         </div>
       </div>
 
+    </div>
+  )
+}
+
+/* Riga singola artifact nella sidebar */
+function ArtifactRow({ course, onNavigate, showProgress = true }) {
+  const Icon = course.icon ? ICONS[course.icon] : null
+  return (
+    <div
+      onClick={() => onNavigate('course', course)}
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 2 }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <div style={{ width: 20, height: 20, borderRadius: 5, background: course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {Icon
+          ? <Icon size={12} color={course.color} />
+          : <div style={{ width: 8, height: 8, borderRadius: 2, background: course.color }} />
+        }
+      </div>
+      <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+        {course.name}
+      </span>
+      {/* Mostra percentuale solo per i sentieri, non per i leaflet */}
+      {showProgress && (
+        <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{course.progress}%</span>
+      )}
     </div>
   )
 }
