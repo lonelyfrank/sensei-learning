@@ -31,6 +31,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #a0a0a0;
   --icon-color: #2e2e2e;
+  --logo-color: #a0a0a0;
 }
 
 /* Light */
@@ -46,6 +47,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #e8e8e8;
   --icon-color: #1a1a1a;
+  --logo-color: #1a1a1a;
   
 }
 
@@ -62,7 +64,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #CAF0F8;
   --icon-color: #0A1628;
-  
+  --logo-color: #CAF0F8;
 }
 
 /* sensei */
@@ -78,6 +80,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #CAF0F8;
   --icon-color: #0A1628;
+  --logo-color: #0A1628;
   
 }
 
@@ -94,6 +97,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #94a3b8;
   --icon-color: #1a2338;
+  --logo-color: #94a3b8;
 }
 
 /* Forest — verde scuro */
@@ -109,6 +113,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #86b094;
   --icon-color: #1a2e22;
+  --logo-color: #86b094;
 }
 
 /* Amber — caldo scuro */
@@ -124,6 +129,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #fef3c7;
   --icon-color: #92400e;
+  --logo-color: #fef3c7;
 }
 
 /* Rose — chiaro rosato */
@@ -139,6 +145,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #fecdd3;
   --icon-color: #9f1239;
+  --logo-color: #9f1239;
 }
 
 /* Nord — grigio-blu freddo */
@@ -154,6 +161,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #81a1c1;
   --icon-color: #2e3440;
+  --logo-color: #81a1c1;
 }
 
 /* Obsidian — nero puro con accenti indaco */
@@ -169,6 +177,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #c9c9e0;
   --icon-color: #1a1a25;
+  --logo-color: #c9c9e0;
 }
 
 /* Ocean — blu profondo con accenti ciano */
@@ -184,6 +193,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #cce5ff;
   --icon-color: #112a50;
+  --logo-color: #cce5ff;
 }
 
 /* Paper — bianco caldo stile carta */
@@ -199,6 +209,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #e0d8cc;
   --icon-color: #2c2416;
+  --logo-color: #2c2416;
 }
 
 /* Sakura — rosa tenue stile giapponese */
@@ -214,6 +225,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #ffe4ef;
   --icon-color: #4a1228;
+  --logo-color: #4a1228;
 }
 
 /* Graphite — antracite elegante */
@@ -229,6 +241,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #98989d;
   --icon-color: #1c1c1e;
+  --logo-color: #98989d;
 }
 
 /* Avocado — verde soft */
@@ -244,6 +257,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #ECF39E;
   --icon-color: #132A13;
+  --logo-color: #ECF39E;
 }
 
 /* Artic — glaciale chiaro */
@@ -259,6 +273,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #CAF0F8;
   --icon-color: #023E8A;
+  --logo-color: #CAF0F8;
 }
 
 /* Aqua — light liquid */
@@ -274,6 +289,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #C4FFF9;
   --icon-color: #1D4E89;
+  --logo-color: #C4FFF9;
 }
 
 /* Cherry — fioritura di ciliegio */
@@ -289,6 +305,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #FAE0E4;
   --icon-color: #FF0A54;
+  --logo-color: #FF0A54;
 }
 
 /* Grass — Praterie verdi */
@@ -304,6 +321,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #AAD576;
   --icon-color: #143601;
+  --logo-color: #143601;
 }
 
 /* Pine — Foresta di pini */
@@ -319,6 +337,7 @@
   --icon-filter: brightness(0);
   --bg-icon: #333D29;
   --icon-color: #C2C5AA;
+  --logo-color: #C2C5AA;
 }
 
 /* ── BASE ── */
