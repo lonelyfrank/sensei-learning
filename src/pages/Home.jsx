@@ -1,90 +1,248 @@
 import React, { useState } from 'react'
 import { ICONS } from '../components/icons.jsx'
 
-const FILTERS = ['Tutti', 'In corso', 'Non iniziati']
+// Filtri per i sentieri
+const SENTIERO_FILTERS = ['Tutti', 'In corso', 'Non iniziati']
+// Filtri per i leaflet
+const LEAFLET_FILTERS = ['Tutti', 'Aperti']
+
+// Stato iniziale sezioni — aperte di default, persistito in localStorage
+const getSectionState = (key, defaultVal = true) => {
+  try { return JSON.parse(localStorage.getItem(`sensei-section-${key}`) ?? String(defaultVal)) }
+  catch { return defaultVal }
+}
+const setSectionState = (key, val) => {
+  localStorage.setItem(`sensei-section-${key}`, JSON.stringify(val))
+}
 
 function Home({ courses, onSelectCourse, onImport, onRemove }) {
   const [view, setView] = useState('grid')
-  const [filter, setFilter] = useState('Tutti')
+  const [search, setSearch] = useState('')
+  const [sentieroFilter, setSentieroFilter] = useState('Tutti')
+  const [leafletFilter, setLeafletFilter] = useState('Tutti')
 
-  const inProgress = courses
+  // Stato collasso sezioni — persistito
+  const [openInCorso, setOpenInCorso] = useState(() => getSectionState('in-corso'))
+  const [openSentieri, setOpenSentieri] = useState(() => getSectionState('sentieri'))
+  const [openLeaflet, setOpenLeaflet] = useState(() => getSectionState('leaflet'))
+
+  const toggleSection = (key, val, setter) => {
+    setter(!val)
+    setSectionState(key, !val)
+  }
+
+  // Separa sentieri e leaflet
+  const sentieri = courses.filter(c => c.type === 'sentiero' || !c.type)
+  const leaflets = courses.filter(c => c.type === 'leaflet')
+
+  // Ricerca globale — mostra risultati misti
+  const isSearching = search.trim().length > 0
+  const searchResults = courses.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  // Sentieri in corso
+  const inProgress = sentieri
     .filter(c => c.progress > 0 && c.progress < 100)
     .sort((a, b) => b.progress - a.progress)
 
-  const completed = courses.filter(c => c.progress === 100)
+  // Sentieri filtrati
+  const sentieriFiltered = sentieri.filter(c => {
+    if (sentieroFilter === 'In corso') return c.progress > 0 && c.progress < 100
+    if (sentieroFilter === 'Non iniziati') return c.progress === 0
+    return true
+  })
 
-  const allFiltered = courses.filter(c => {
-    if (filter === 'In corso') return c.progress > 0 && c.progress < 100
-    if (filter === 'Non iniziati') return c.progress === 0
+  // Leaflet filtrati
+  const leafletFiltered = leaflets.filter(c => {
+    if (leafletFilter === 'Aperti') return c.progress > 0
     return true
   })
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>I miei sentieri</h1>
-        <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3 }}>
-          <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
-          <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
+      {/* ── HEADER ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, gap: 16 }}>
+        <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', flexShrink: 0 }}>I miei sentieri</h1>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
+          {/* Barra di ricerca */}
+          <div style={{ position: 'relative', maxWidth: 220, flex: 1 }}>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
+              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cerca..."
+              style={{
+                width: '100%', padding: '6px 10px 6px 28px', fontSize: 13,
+                color: 'var(--text-primary)', background: 'var(--bg-secondary)',
+                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                outline: 'none',
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', fontSize: 14, lineHeight: 1 }}
+              >×</button>
+            )}
+          </div>
+
+          {/* Toggle griglia/lista */}
+          <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3, flexShrink: 0 }}>
+            <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
+            <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
+          </div>
         </div>
       </div>
 
-      {/* In corso */}
-      {inProgress.length > 0 && (
-        <Section title="In corso">
-          <CourseGrid view={view}>
-            {inProgress.map(course => (
-              <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} />
-            ))}
-          </CourseGrid>
-        </Section>
-      )}
-
-      {/* Divisore tra "In corso" e "Tutti i sentieri" */}
-      {inProgress.length > 0 && (
-        <div style={{ height: '0.5px', background: 'var(--border)', marginBottom: 28 }} />
-      )}
-
-      {/* Tutti i sentieri */}
-      <Section
-        title="Tutti i sentieri"
-        action={
-          <div style={{ display: 'flex', gap: 6 }}>
-            {FILTERS.map(f => <FilterPill key={f} label={f} active={filter === f} onClick={() => setFilter(f)} />)}
+      {/* ── RISULTATI RICERCA ── */}
+      {isSearching && (
+        <div style={{ marginBottom: 32 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Risultati per "{search}" — {searchResults.length} trovati
+          </span>
+          <div style={{ marginTop: 12 }}>
+            <CourseGrid view={view}>
+              {searchResults.map(course => (
+                <CourseCard
+                  key={course.id} course={course} view={view}
+                  onClick={() => onSelectCourse(course)} onRemove={onRemove}
+                  isCompleted={course.progress === 100}
+                  showTypeBadge
+                />
+              ))}
+              {searchResults.length === 0 && (
+                <p style={{ fontSize: 13, color: 'var(--text-tertiary)', padding: '12px 0' }}>Nessun risultato trovato.</p>
+              )}
+            </CourseGrid>
           </div>
-        }
-      >
-        <CourseGrid view={view}>
-          {allFiltered.map(course => (
-            <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} />
-          ))}
-          <ImportCard view={view} onClick={onImport} />
-        </CourseGrid>
-      </Section>
-
-      {/* Completati */}
-      {completed.length > 0 && (
-        <Section title="Completati">
-          <CourseGrid view={view}>
-            {completed.map(course => (
-              <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted />
-            ))}
-          </CourseGrid>
-        </Section>
-      )}
-
-      {/* Stato vuoto */}
-      {courses.length === 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 12, color: 'var(--text-tertiary)' }}>
-          <p style={{ fontSize: 15 }}>Nessun sentiero caricato.</p>
-          <button onClick={onImport} style={{ fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px' }}>
-            + Importa il tuo primo sentiero
-          </button>
         </div>
       )}
 
+      {/* ── SEZIONI NORMALI (nascoste durante ricerca) ── */}
+      {!isSearching && (
+        <>
+          {/* ── IN CORSO ── */}
+          {inProgress.length > 0 && (
+            <Section
+              title="In corso"
+              open={openInCorso}
+              onToggle={() => toggleSection('in-corso', openInCorso, setOpenInCorso)}
+            >
+              <CourseGrid view={view}>
+                {inProgress.map(course => (
+                  <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} />
+                ))}
+              </CourseGrid>
+            </Section>
+          )}
+
+          {/* Divisore */}
+          {inProgress.length > 0 && (
+            <div style={{ height: '0.5px', background: 'var(--border)', marginBottom: 28 }} />
+          )}
+
+          {/* ── SENTIERI ── */}
+          <CollapsibleSection
+            title="Sentieri"
+            open={openSentieri}
+            onToggle={() => toggleSection('sentieri', openSentieri, setOpenSentieri)}
+            action={
+              <div style={{ display: 'flex', gap: 6 }}>
+                {SENTIERO_FILTERS.map(f => (
+                  <FilterPill key={f} label={f} active={sentieroFilter === f} onClick={() => setSentieroFilter(f)} />
+                ))}
+              </div>
+            }
+          >
+            <CourseGrid view={view}>
+              {sentieriFiltered.map(course => (
+                <CourseCard
+                  key={course.id} course={course} view={view}
+                  onClick={() => onSelectCourse(course)} onRemove={onRemove}
+                  isCompleted={course.progress === 100}
+                />
+              ))}
+              <ImportCard view={view} onClick={onImport} />
+            </CourseGrid>
+          </CollapsibleSection>
+
+          {/* ── LEAFLET ── */}
+          {leaflets.length > 0 && (
+            <>
+              <div style={{ height: '0.5px', background: 'var(--border)', margin: '0 0 28px' }} />
+              <CollapsibleSection
+                title="Leaflet"
+                open={openLeaflet}
+                onToggle={() => toggleSection('leaflet', openLeaflet, setOpenLeaflet)}
+                action={
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {LEAFLET_FILTERS.map(f => (
+                      <FilterPill key={f} label={f} active={leafletFilter === f} onClick={() => setLeafletFilter(f)} />
+                    ))}
+                  </div>
+                }
+              >
+                <CourseGrid view={view}>
+                  {leafletFiltered.map(course => (
+                    <CourseCard
+                      key={course.id} course={course} view={view}
+                      onClick={() => onSelectCourse(course)} onRemove={onRemove}
+                      isLeaflet
+                    />
+                  ))}
+                  <ImportCard view={view} onClick={onImport} label="Importa leaflet" />
+                </CourseGrid>
+              </CollapsibleSection>
+            </>
+          )}
+
+          {/* ── STATO VUOTO ── */}
+          {courses.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 12, color: 'var(--text-tertiary)' }}>
+              <p style={{ fontSize: 15 }}>Nessun artifact caricato.</p>
+              <button
+                onClick={onImport}
+                style={{ fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px' }}
+              >
+                + Importa il tuo primo sentiero
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/* Sezione collassabile con chevron animato */
+function CollapsibleSection({ title, open, onToggle, action, children }) {
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: open ? 10 : 0 }}>
+        <div
+          onClick={onToggle}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}
+        >
+          {/* Chevron animato */}
+          <svg
+            width="10" height="10" viewBox="0 0 16 16" fill="none"
+            style={{ color: 'var(--text-tertiary)', transition: 'transform 0.2s', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >
+            <path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {title}
+          </span>
+        </div>
+        {action && open && action}
+      </div>
+      {open && children}
     </div>
   )
 }
@@ -106,7 +264,7 @@ function CourseGrid({ view, children }) {
   return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10 }}>{children}</div>
 }
 
-function CourseCard({ course, view, onClick, isCompleted, onRemove }) {
+function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, showTypeBadge }) {
   const [hovered, setHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = React.useRef(null)
@@ -118,7 +276,6 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove }) {
     return () => document.removeEventListener('mousedown', handle)
   }, [menuOpen])
 
-  // Renderizza icona sentiero — usa quella salvata o fallback SVG
   const CourseIconEl = () => {
     if (isCompleted) return <CheckIcon color="#1D9E75" />
     if (course.icon && ICONS[course.icon]) {
@@ -136,18 +293,32 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove }) {
         style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '0.5px solid var(--border)', background: hovered ? 'var(--bg-secondary)' : 'var(--bg-primary)', cursor: 'pointer', transition: 'background 0.15s', opacity: isCompleted ? 0.7 : 1, position: 'relative' }}
       >
         <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1 }}>
-          {/* Icona in vista lista */}
           <div style={{ width: 28, height: 28, borderRadius: 6, background: isCompleted ? '#1D9E7522' : course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <CourseIconEl />
           </div>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{course.name}</span>
-          <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{isCompleted ? 'Completato' : `${course.completedDays} / ${course.totalDays} giorni`}</span>
-          <div style={{ width: 80, height: 3, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
-            <div style={{ width: `${course.progress}%`, height: '100%', background: isCompleted ? '#1D9E75' : course.color, borderRadius: 2 }} />
-          </div>
-          <span style={{ fontSize: 11, color: course.color, minWidth: 32, textAlign: 'right' }}>{course.progress}%</span>
+
+          {/* Badge tipo nella ricerca */}
+          {showTypeBadge && (
+            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+              {course.type === 'leaflet' ? 'leaflet' : 'sentiero'}
+            </span>
+          )}
+
+          {/* Info progresso — solo per sentieri */}
+          {!isLeaflet && (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                {isCompleted ? 'Completato' : `${course.completedDays} / ${course.totalDays} step`}
+              </span>
+              <div style={{ width: 80, height: 3, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
+                <div style={{ width: `${course.progress}%`, height: '100%', background: isCompleted ? '#1D9E75' : course.color, borderRadius: 2 }} />
+              </div>
+              <span style={{ fontSize: 11, color: course.color, minWidth: 32, textAlign: 'right' }}>{course.progress}%</span>
+            </>
+          )}
         </div>
-        <ContextMenu visible={hovered} open={menuOpen} onToggle={() => setMenuOpen(o => !o)} onRemove={() => { setMenuOpen(false); onRemove(course) }} menuRef={menuRef} />
+        <ContextMenu visible={hovered} open={menuOpen} onToggle={() => setMenuOpen(o => !o)} onRemove={() => { setMenuOpen(false); onRemove(course) }} menuRef={menuRef} isLeaflet={isLeaflet} />
       </div>
     )
   }
@@ -158,27 +329,44 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove }) {
       onMouseLeave={() => { setHovered(false); setMenuOpen(false) }}
       style={{ background: isCompleted ? 'var(--bg-secondary)' : hovered ? 'var(--bg-secondary)' : 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16, cursor: 'pointer', transition: 'background 0.15s', opacity: isCompleted ? 0.75 : 1, position: 'relative' }}
     >
-      <ContextMenu visible={hovered} open={menuOpen} onToggle={() => setMenuOpen(o => !o)} onRemove={() => { setMenuOpen(false); onRemove(course) }} menuRef={menuRef} />
+      <ContextMenu visible={hovered} open={menuOpen} onToggle={() => setMenuOpen(o => !o)} onRemove={() => { setMenuOpen(false); onRemove(course) }} menuRef={menuRef} isLeaflet={isLeaflet} />
 
       <div onClick={onClick}>
-        {/* Icona in vista griglia */}
         <div style={{ width: 36, height: 36, borderRadius: 10, background: isCompleted ? '#1D9E7522' : course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
           <CourseIconEl />
         </div>
-        <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{course.name}</p>
-        <p style={{ margin: '0 0 10px', fontSize: 11, color: isCompleted ? '#1D9E75' : 'var(--text-tertiary)' }}>
-          {isCompleted ? 'Completato' : `${course.completedDays} / ${course.totalDays} giorni`}
-        </p>
-        <div style={{ height: 3, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
-          <div style={{ width: `${course.progress}%`, height: '100%', background: isCompleted ? '#1D9E75' : course.color, borderRadius: 2 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{course.name}</p>
+          {/* Badge tipo nella ricerca */}
+          {showTypeBadge && (
+            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 99, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+              {course.type === 'leaflet' ? 'leaflet' : 'sentiero'}
+            </span>
+          )}
         </div>
-        {!isCompleted && <p style={{ margin: '6px 0 0', fontSize: 11, color: course.color, textAlign: 'right' }}>{course.progress}%</p>}
+
+        {/* Progresso — solo per sentieri */}
+        {!isLeaflet ? (
+          <>
+            <p style={{ margin: '0 0 10px', fontSize: 11, color: isCompleted ? '#1D9E75' : 'var(--text-tertiary)' }}>
+              {isCompleted ? 'Completato' : `${course.completedDays} / ${course.totalDays} step`}
+            </p>
+            <div style={{ height: 3, background: 'var(--bg-tertiary)', borderRadius: 2 }}>
+              <div style={{ width: `${course.progress}%`, height: '100%', background: isCompleted ? '#1D9E75' : course.color, borderRadius: 2 }} />
+            </div>
+            {!isCompleted && <p style={{ margin: '6px 0 0', fontSize: 11, color: course.color, textAlign: 'right' }}>{course.progress}%</p>}
+          </>
+        ) : (
+          <p style={{ margin: '0', fontSize: 11, color: 'var(--text-tertiary)' }}>
+            {course.progress > 0 ? 'Aperto' : 'Non ancora aperto'}
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-function ContextMenu({ visible, open, onToggle, onRemove, menuRef }) {
+function ContextMenu({ visible, open, onToggle, onRemove, menuRef, isLeaflet }) {
   return (
     <div ref={menuRef} style={{ position: 'absolute', top: 10, right: 10, opacity: visible || open ? 1 : 0, transition: 'opacity 0.15s', zIndex: 10 }}>
       <button
@@ -193,7 +381,7 @@ function ContextMenu({ visible, open, onToggle, onRemove, menuRef }) {
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <TrashIcon /> Elimina sentiero
+            <TrashIcon /> Elimina {isLeaflet ? 'leaflet' : 'sentiero'}
           </button>
         </div>
       )}
@@ -201,13 +389,13 @@ function ContextMenu({ visible, open, onToggle, onRemove, menuRef }) {
   )
 }
 
-function ImportCard({ view, onClick }) {
+function ImportCard({ view, onClick, label = 'Importa' }) {
   const [hovered, setHovered] = useState(false)
   if (view === 'list') {
     return (
       <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '0.5px dashed var(--border)', cursor: 'pointer', opacity: hovered ? 0.8 : 0.5, transition: 'opacity 0.15s' }}>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>+ Importa sentiero</span>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>+ {label}</span>
       </div>
     )
   }
@@ -215,7 +403,7 @@ function ImportCard({ view, onClick }) {
     <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{ border: '0.5px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: 16, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 110, opacity: hovered ? 0.8 : 0.5, transition: 'opacity 0.15s' }}>
       <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Importa</span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
     </div>
   )
 }
@@ -236,7 +424,6 @@ function ViewButton({ active, onClick, children }) {
   )
 }
 
-// Icona fallback quando il sentiero non ha un'icona personalizzata
 function CourseIconFallback({ color }) {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
