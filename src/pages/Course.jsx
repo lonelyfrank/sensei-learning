@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react'
 
 // Nomi di icone Lucide che collidono con built-in JavaScript
-// Questi vanno rinominati per evitare di sovrascrivere i globali nativi
 const JS_BUILTINS = ['Map', 'Set', 'Array', 'Object', 'Error', 'Event', 'URL', 'Image']
 
-function Course({ course, onBack, onProgressUpdate }) {
+function Course({ course, onBack, onProgressUpdate, onComplete }) {
   const [courseCode, setCourseCode] = useState(null)
   const [lucideBundle, setLucideBundle] = useState(null)
   const [error, setError] = useState(null)
   const iframeRef = useRef(null)
+  // Tiene traccia se il completamento è già stato notificato in questa sessione
+  const completedNotified = useRef(false)
 
   useEffect(() => {
     loadCourse()
+    completedNotified.current = false
     const handleMessage = (event) => handleStorageMessage(event, course.id)
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
@@ -42,6 +44,30 @@ function Course({ course, onBack, onProgressUpdate }) {
     } else if (type === 'sensei-storage-set') {
       result = await window.sensei.storage.set(key, value, courseId)
       if (onProgressUpdate) onProgressUpdate()
+
+      // ── CONTROLLA COMPLETAMENTO ──
+      // Solo per sentieri (non leaflet) e solo una volta per sessione
+      if (onComplete && !completedNotified.current && course.type !== 'leaflet') {
+        try {
+          const parsed = JSON.parse(value)
+          const isCompletedMap = (
+            typeof parsed === 'object' &&
+            !Array.isArray(parsed) &&
+            Object.keys(parsed).length > 0 &&
+            Object.entries(parsed).every(([k, v]) => !isNaN(parseInt(k)) && typeof v === 'boolean')
+          )
+          if (isCompletedMap) {
+            const total = course.total_days || 0
+            const completedCount = Object.values(parsed).filter(v => v).length
+            const allDone = Object.values(parsed).every(v => v === true)
+            if (allDone && total > 0 && completedCount >= total) {
+              completedNotified.current = true
+              onComplete(course.name)
+            }
+          }
+        } catch (e) {}
+      }
+
     } else if (type === 'sensei-storage-delete') {
       result = await window.sensei.storage.delete(key, courseId)
     } else if (type === 'sensei-storage-list') {
@@ -95,8 +121,7 @@ function Course({ course, onBack, onProgressUpdate }) {
     return transformed
   }
 
-  // Propaga il mousemove dal contesto dell'overlay al window principale
-  // così la bulge della sidebar riceve sempre le coordinate reali
+  // Propaga il mousemove dall'overlay al window principale
   const handleOverlayMouseMove = (e) => {
     window.dispatchEvent(new MouseEvent('mousemove', {
       clientX: e.clientX,
@@ -115,21 +140,13 @@ function Course({ course, onBack, onProgressUpdate }) {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
   </style>
-
-  <!-- STEP 1: Salva Map/Set nativi prima di qualsiasi script esterno -->
   <script>
     const __nativeMap = window.Map
     const __nativeSet = window.Set
   </script>
-
-  <!-- STEP 2: Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- STEP 3: React e ReactDOM -->
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-
-  <!-- STEP 4: Destruttura hooks React globalmente -->
   <script>
     window.React = React
     window.react = React
@@ -139,32 +156,19 @@ function Course({ course, onBack, onProgressUpdate }) {
       createContext, memo, Fragment
     } = React
   </script>
-
-  <!-- STEP 5: Bundle lucide-react locale — dopo React -->
   <script>${lucide || ''}</script>
-
-  <!-- STEP 6: Espone le icone Lucide come _lucideReact -->
   <script>
     window._lucideReact = window.LucideReact || {}
     console.log('lucide loaded:', Object.keys(window._lucideReact).length, 'icons')
   </script>
-
-  <!-- STEP 7: Babel per transpilare JSX -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-
-  <!-- STEP 8: Storage bridge — comunica con Sensei via postMessage -->
   <script>
     let msgId = 0
     const pending = {}
-
     window.addEventListener('message', (e) => {
       const { id, result } = e.data || {}
-      if (id && pending[id]) {
-        pending[id](result)
-        delete pending[id]
-      }
+      if (id && pending[id]) { pending[id](result); delete pending[id] }
     })
-
     function storageCall(type, data) {
       return new Promise((resolve) => {
         const id = ++msgId
@@ -172,7 +176,6 @@ function Course({ course, onBack, onProgressUpdate }) {
         window.parent.postMessage({ type: 'sensei-storage-' + type, id, ...data }, '*')
       })
     }
-
     window.storage = {
       get: (key) => storageCall('get', { key }),
       set: (key, value) => storageCall('set', { key, value }),
@@ -183,17 +186,11 @@ function Course({ course, onBack, onProgressUpdate }) {
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- STEP 9: Esegue il codice dell'artifact transpilato da Babel -->
   <script type="text/babel" data-presets="react">
-    // Ripristina Map/Set nativi nel contesto Babel
     window.Map = __nativeMap
     window.Set = __nativeSet
-
     const _lucide = window._lucideReact || {}
-
     ${transformCode(code)}
-
     const root = ReactDOM.createRoot(document.getElementById('root'))
     root.render(React.createElement(__MainComponent))
   </script>
@@ -251,7 +248,6 @@ function Course({ course, onBack, onProgressUpdate }) {
         )}
         {!error && courseCode && lucideBundle && (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-
             <iframe
               ref={iframeRef}
               srcDoc={generateHTML(courseCode, lucideBundle)}
@@ -259,20 +255,12 @@ function Course({ course, onBack, onProgressUpdate }) {
               sandbox="allow-scripts allow-same-origin"
               title={course.name}
             />
-
-            {/* ── OVERLAY BORDO SINISTRO ──
-                Striscia trasparente di 60px che cattura il mousemove
-                vicino alla sidebar e lo propaga al window principale.
-                Così la bulge funziona correttamente anche con l'iframe aperto,
-                senza bloccare l'interazione con il contenuto dell'artifact. */}
+            {/* Overlay bordo sinistro — propaga mousemove alla bulge */}
             <div
               style={{
-                position: 'absolute',
-                top: 0, left: 0,
+                position: 'absolute', top: 0, left: 0,
                 width: 60, height: '100%',
-                zIndex: 10,
-                background: 'transparent',
-                pointerEvents: 'auto',
+                zIndex: 10, background: 'transparent', pointerEvents: 'auto',
               }}
               onMouseMove={handleOverlayMouseMove}
               onMouseLeave={handleOverlayMouseMove}

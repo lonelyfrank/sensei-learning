@@ -10,6 +10,8 @@ import Progress from './pages/Progress.jsx'
 import CreateHub from './pages/CreateHub.jsx'
 import CreateSentieroAI from './create/sentiero-ai/CreateSentieroAI.jsx'
 import CreateLeafletAI from './create/leaflet-ai/CreateLeafletAI.jsx'
+import Toast from './components/Toast.jsx'
+import { useToast } from './hooks/useToast.js'
 
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
@@ -31,6 +33,9 @@ function App() {
   const [courses, setCourses] = useState([])
   const [user, setUser] = useState({ name: 'Utente', avatar: null })
   const [importDialog, setImportDialog] = useState(null)
+
+  // Sistema toast globale
+  const { toasts, removeToast, toastComplete } = useToast()
 
   useEffect(() => {
     loadCourses()
@@ -95,7 +100,6 @@ function App() {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* Sidebar con effetto bulge integrato */}
         <Sidebar
           collapsed={collapsed}
           onCollapse={() => setCollapsed(true)}
@@ -111,8 +115,6 @@ function App() {
 
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-          {/* ── ROUTING VISTE ── */}
-
           {currentView === 'home' && (
             <Home
               courses={courses}
@@ -127,6 +129,7 @@ function App() {
               course={selectedCourse}
               onBack={() => handleNavigate('home')}
               onProgressUpdate={loadCourses}
+              onComplete={toastComplete}
             />
           )}
 
@@ -177,6 +180,9 @@ function App() {
           onCancel={() => setImportDialog(null)}
         />
       )}
+
+      {/* Toast globali — sempre sopra tutto */}
+      <Toast toasts={toasts} onRemove={removeToast} />
 
     </div>
   )

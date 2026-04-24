@@ -9,6 +9,11 @@ import { GridIcon, ListIcon } from '../home/homeIcons.jsx'
 
 const SENTIERO_FILTERS = ['Tutti', 'In corso', 'Non iniziati']
 const LEAFLET_FILTERS = ['Tutti', 'Aperti']
+const SORT_OPTIONS = [
+  { id: 'date', label: 'Data aggiunta' },
+  { id: 'name', label: 'Nome' },
+  { id: 'progress', label: 'Progresso' },
+]
 
 function ViewButton({ active, onClick, children }) {
   return (
@@ -29,11 +34,22 @@ function Section({ title, children }) {
   )
 }
 
+/* Applica ordinamento a una lista di corsi */
+function sortCourses(courses, sortBy) {
+  return [...courses].sort((a, b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name)
+    if (sortBy === 'progress') return b.progress - a.progress
+    // date — usa added_at dal DB (default)
+    return 0
+  })
+}
+
 function Home({ courses, onSelectCourse, onImport, onRemove }) {
   const [view, setView] = useState('grid')
   const [search, setSearch] = useState('')
   const [sentieroFilter, setSentieroFilter] = useState('Tutti')
   const [leafletFilter, setLeafletFilter] = useState('Tutti')
+  const [sortBy, setSortBy] = useState('date')
   const [openSentieri, setOpenSentieri] = useState(() => getSectionState('sentieri'))
   const [openLeaflet, setOpenLeaflet] = useState(() => getSectionState('leaflet'))
 
@@ -44,13 +60,19 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
   const isSearching = search.trim().length > 0
   const searchResults = courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
 
-  const inProgress = sentieri.filter(c => c.progress > 0 && c.progress < 100).sort((a, b) => b.progress - a.progress)
+  const inProgress = sentieri
+    .filter(c => c.progress > 0 && c.progress < 100)
+    .sort((a, b) => b.progress - a.progress)
 
-  const sentieriFiltered = sentieri.filter(c => {
-    if (sentieroFilter === 'In corso') return c.progress > 0 && c.progress < 100
-    if (sentieroFilter === 'Non iniziati') return c.progress === 0
-    return true
-  })
+  // Sentieri filtrati e ordinati
+  const sentieriFiltered = sortCourses(
+    sentieri.filter(c => {
+      if (sentieroFilter === 'In corso') return c.progress > 0 && c.progress < 100
+      if (sentieroFilter === 'Non iniziati') return c.progress === 0
+      return true
+    }),
+    sortBy
+  )
 
   const leafletFiltered = leaflets.filter(c => {
     if (leafletFilter === 'Aperti') return c.progress > 0
@@ -65,6 +87,24 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
         <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', flexShrink: 0 }}>I miei sentieri</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
           <SearchBar value={search} onChange={setSearch} />
+
+          {/* Ordinamento — solo per sentieri */}
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            style={{
+              fontSize: 12, padding: '5px 8px',
+              color: 'var(--text-secondary)', background: 'var(--bg-secondary)',
+              border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+              outline: 'none', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* Toggle griglia/lista */}
           <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3, flexShrink: 0 }}>
             <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
             <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
@@ -101,7 +141,7 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
             </>
           )}
 
-          {/* Sentieri — collassabile */}
+          {/* Sentieri — collassabile con ordinamento */}
           <CollapsibleSection
             title="Sentieri"
             open={openSentieri}
@@ -120,7 +160,7 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
             </CourseGrid>
           </CollapsibleSection>
 
-          {/* Leaflet — collassabile, mostrato solo se presenti */}
+          {/* Leaflet — collassabile */}
           {leaflets.length > 0 && (
             <>
               <div style={{ height: '0.5px', background: 'var(--border)', margin: '0 0 28px' }} />
