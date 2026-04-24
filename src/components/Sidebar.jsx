@@ -26,8 +26,11 @@ function buildBulgePath(y, radius, height, sidebarWidth) {
   `
 }
 
-/* Effetto bulge sul bordo destro della sidebar */
-function SidebarBulge({ sidebarWidth, collapsed, onToggle }) {
+/* Effetto bulge sul bordo destro della sidebar
+   disabled=true quando un artifact è aperto nell'iframe — il mouse
+   entra nel contesto dell'iframe e il window principale non riceve
+   più eventi mousemove, lasciando la bulge bloccata */
+function SidebarBulge({ sidebarWidth, collapsed, onToggle, disabled }) {
   const stateRef = useRef({ mouseY: 0, currentY: 300, currentRadius: 0, targetRadius: 0, rafId: null })
   const svgRef = useRef(null)
   const pathRef = useRef(null)
@@ -60,6 +63,11 @@ function SidebarBulge({ sidebarWidth, collapsed, onToggle }) {
   useEffect(() => {
     const handleMouseMove = (e) => {
       const s = stateRef.current
+      // Se disabilitato (iframe aperto) azzera subito e non aggiornare
+      if (disabled) {
+        s.targetRadius = 0
+        return
+      }
       const distFromEdge = Math.abs(e.clientX - sidebarWidth)
       s.mouseY = e.clientY - 40
       if (distFromEdge < TRIGGER_ZONE && e.clientX >= sidebarWidth - 10) {
@@ -76,7 +84,12 @@ function SidebarBulge({ sidebarWidth, collapsed, onToggle }) {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseleave', handleMouseLeave)
     }
-  }, [sidebarWidth])
+  }, [sidebarWidth, disabled])
+
+  // Quando disabled cambia a true, forza subito targetRadius a 0
+  useEffect(() => {
+    if (disabled) stateRef.current.targetRadius = 0
+  }, [disabled])
 
   return (
     <svg
@@ -156,9 +169,7 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
           borderBottom: '0.5px solid var(--border)', flexShrink: 0,
           gap: 8,
         }}>
-          <SenseiLogo
-            style={{ width: 38, height: 38, color: 'var(--logo-color)', flexShrink: 0 }}
-          />
+          <SenseiLogo style={{ width: 38, height: 38, color: 'var(--logo-color)', flexShrink: 0 }} />
           {!collapsed && (
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
               Sensei
@@ -261,11 +272,7 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
 
           {/* Profilo collassato — solo avatar */}
           {collapsed && (
-            <div
-              ref={menuButtonRef}
-              onClick={handleMenuToggle}
-              style={{ display: 'flex', justifyContent: 'center' }}
-            >
+            <div ref={menuButtonRef} onClick={handleMenuToggle} style={{ display: 'flex', justifyContent: 'center' }}>
               <div
                 style={{ width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
@@ -278,7 +285,6 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
         </div>
       </div>
 
-      {/* Effetto bulge sul bordo della sidebar */}
       <SidebarBulge
         sidebarWidth={sidebarWidth}
         collapsed={collapsed}

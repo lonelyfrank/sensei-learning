@@ -55,75 +55,54 @@ function Course({ course, onBack, onProgressUpdate }) {
 
   // Trasforma il codice JSX dell'artifact per renderlo compatibile con l'iframe Babel
   const transformCode = (code) => {
-    // Tiene traccia di quali builtin sono stati usati come icone Lucide
     const builtinsUsedAsIcons = new Set()
 
     let transformed = code
-      // ── METADATI SENSEI ──
-      // Rimuove le variabili di identificazione Sensei — non compatibili con Babel in-browser
-      // export const SENSEI_TYPE = 'sentiero' → // SENSEI_TYPE removed
       .replace(/^export\s+const\s+SENSEI_TYPE\s*=.*$/gm, '// SENSEI_TYPE removed')
       .replace(/^export\s+const\s+SENSEI_STEPS\s*=.*$/gm, '// SENSEI_STEPS removed')
-
-      // ── IMPORT REACT ──
-      // Rimuove import React — già disponibile globalmente nell'iframe
       .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
-      // Rimuove import di hook React — già destrutturati globalmente
       .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
         imports.split(',').map(i => {
           const name = i.trim().split(' as ').pop().trim()
           return `// ${name} already global`
         }).join('\n')
       )
-      // Rimuove import react-dom — già disponibile globalmente
       .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
-
-      // ── IMPORT LUCIDE ──
-      // Converte import lucide-react in riferimenti al bundle locale (_lucide)
-      // Gestisce anche icone che collidono con built-in JS (es. Map, Set)
       .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
         imports.split(',').map(i => {
           const parts = i.trim().split(' as ')
           const original = parts[0].trim()
           const alias = parts[parts.length - 1].trim()
-
           if (JS_BUILTINS.includes(alias)) {
-            // Segna questo builtin come usato come icona — va rinominato nel codice
             builtinsUsedAsIcons.add(alias)
             const safeName = `_${alias}Icon`
-            // Dichiara solo il safe name — l'alias originale NON viene ridichiarato
-            // per non sovrascrivere il builtin JS nativo
             return `const ${safeName} = _lucide['${original}'] || (() => null)`
           }
-
           return `const ${alias} = _lucide['${original}'] || (() => null)`
         }).join('\n')
       )
-
-      // ── ALTRI IMPORT ──
-      // Rimuove tutti gli altri import rimasti (es. librerie non supportate)
       .replace(/^import\s+.*$/gm, '// import removed')
-
-      // ── EXPORT ──
-      // Sostituisce export default con variabile locale usata da ReactDOM.render
       .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
 
-    // ── FIX BUILTIN COLLISION ──
-    // Rinomina tutti gli usi degli alias builtin nel resto del codice
-    // per evitare che sovrascrivano i costruttori JS nativi
     builtinsUsedAsIcons.forEach(name => {
       const safeName = `_${name}Icon`
-      // <Map ... /> → <_MapIcon ... />
       transformed = transformed.replace(new RegExp(`<${name}(\\s|/|>)`, 'g'), `<${safeName}$1`)
-      // </Map> → </_MapIcon>
       transformed = transformed.replace(new RegExp(`</${name}>`, 'g'), `</${safeName}>`)
-      // icon: Map, → icon: _MapIcon,
       transformed = transformed.replace(new RegExp(`:\\s*${name}([,}\\s\\n])`, 'g'), `: ${safeName}$1`)
-      // icon={Map} → icon={_MapIcon}
       transformed = transformed.replace(new RegExp(`=\\{${name}\\}`, 'g'), `={${safeName}}`)
     })
 
     return transformed
+  }
+
+  // Propaga il mousemove dal contesto dell'overlay al window principale
+  // così la bulge della sidebar riceve sempre le coordinate reali
+  const handleOverlayMouseMove = (e) => {
+    window.dispatchEvent(new MouseEvent('mousemove', {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      bubbles: true,
+    }))
   }
 
   const generateHTML = (code, lucide) => {
@@ -271,13 +250,34 @@ function Course({ course, onBack, onProgressUpdate }) {
           </div>
         )}
         {!error && courseCode && lucideBundle && (
-          <iframe
-            ref={iframeRef}
-            srcDoc={generateHTML(courseCode, lucideBundle)}
-            style={{ width: '100%', height: '100%', border: 'none' }}
-            sandbox="allow-scripts allow-same-origin"
-            title={course.name}
-          />
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+
+            <iframe
+              ref={iframeRef}
+              srcDoc={generateHTML(courseCode, lucideBundle)}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              sandbox="allow-scripts allow-same-origin"
+              title={course.name}
+            />
+
+            {/* ── OVERLAY BORDO SINISTRO ──
+                Striscia trasparente di 60px che cattura il mousemove
+                vicino alla sidebar e lo propaga al window principale.
+                Così la bulge funziona correttamente anche con l'iframe aperto,
+                senza bloccare l'interazione con il contenuto dell'artifact. */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0, left: 0,
+                width: 60, height: '100%',
+                zIndex: 10,
+                background: 'transparent',
+                pointerEvents: 'auto',
+              }}
+              onMouseMove={handleOverlayMouseMove}
+              onMouseLeave={handleOverlayMouseMove}
+            />
+          </div>
         )}
       </div>
 
