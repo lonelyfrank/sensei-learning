@@ -62,7 +62,7 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
             const allDone = Object.values(parsed).every(v => v === true)
             if (allDone && total > 0 && completedCount >= total) {
               completedNotified.current = true
-              onComplete(course.name)
+              onComplete(course.name, course.id)
             }
           }
         } catch (e) {}

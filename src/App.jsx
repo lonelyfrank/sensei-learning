@@ -33,8 +33,9 @@ function App() {
   const [courses, setCourses] = useState([])
   const [user, setUser] = useState({ name: 'Utente', avatar: null })
   const [importDialog, setImportDialog] = useState(null)
+  // Id del sentiero appena completato — usato per animare la card in Home
+  const [justCompleted, setJustCompleted] = useState(null)
 
-  // Sistema toast globale
   const { toasts, removeToast, toastComplete } = useToast()
 
   useEffect(() => {
@@ -70,6 +71,14 @@ function App() {
     setCurrentView(view)
     setSelectedCourse(course)
     setCurrentCreateMode(null)
+  }
+
+  // Gestisce il completamento di un sentiero — toast + animazione card
+  const handleComplete = (courseName, courseId) => {
+    toastComplete(courseName)
+    setJustCompleted(courseId)
+    // Resetta dopo 2s — durata animazione card
+    setTimeout(() => setJustCompleted(null), 2000)
   }
 
   const handleImport = async () => {
@@ -121,6 +130,7 @@ function App() {
               onSelectCourse={(course) => handleNavigate('course', course)}
               onImport={handleImport}
               onRemove={handleRemove}
+              justCompleted={justCompleted}
             />
           )}
 
@@ -129,7 +139,7 @@ function App() {
               course={selectedCourse}
               onBack={() => handleNavigate('home')}
               onProgressUpdate={loadCourses}
-              onComplete={toastComplete}
+              onComplete={handleComplete}
             />
           )}
 
@@ -181,7 +191,6 @@ function App() {
         />
       )}
 
-      {/* Toast globali — sempre sopra tutto */}
       <Toast toasts={toasts} onRemove={removeToast} />
 
     </div>

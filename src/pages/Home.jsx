@@ -44,7 +44,7 @@ function sortCourses(courses, sortBy) {
   })
 }
 
-function Home({ courses, onSelectCourse, onImport, onRemove }) {
+function Home({ courses, onSelectCourse, onImport, onRemove, justCompleted }) {
   const [view, setView] = useState('grid')
   const [search, setSearch] = useState('')
   const [sentieroFilter, setSentieroFilter] = useState('Tutti')
@@ -133,7 +133,7 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
               <Section title="In corso">
                 <CourseGrid view={view}>
                   {inProgress.map(course => (
-                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} />
+                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} justCompleted={justCompleted} />
                   ))}
                 </CourseGrid>
               </Section>
@@ -154,7 +154,7 @@ function Home({ courses, onSelectCourse, onImport, onRemove }) {
           >
             <CourseGrid view={view}>
               {sentieriFiltered.map(course => (
-                <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} />
+                <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} justCompleted={justCompleted} />
               ))}
               <ImportCard view={view} onClick={onImport} />
             </CourseGrid>

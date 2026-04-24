@@ -3,10 +3,13 @@ import { ICONS } from '../components/icons.jsx'
 import { CourseIconFallback, CheckIcon, TrashIcon } from './homeIcons.jsx'
 
 /* Card singola artifact — griglia o lista */
-function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, showTypeBadge }) {
+function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, showTypeBadge, justCompleted }) {
   const [hovered, setHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = React.useRef(null)
+
+  // Animazione flash verde quando il sentiero viene appena completato
+  const isJustCompleted = justCompleted === course.id
 
   React.useEffect(() => {
     if (!menuOpen) return
@@ -36,6 +39,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
           background: hovered ? 'var(--bg-secondary)' : 'var(--bg-primary)',
           cursor: 'pointer', transition: 'background 0.15s',
           opacity: isCompleted ? 0.7 : 1, position: 'relative',
+          animation: isJustCompleted ? 'completeFlash 1s ease forwards' : 'none',
         }}
       >
         <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1 }}>
@@ -76,6 +80,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
         border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)',
         padding: 16, cursor: 'pointer', transition: 'background 0.15s',
         opacity: isCompleted ? 0.75 : 1, position: 'relative',
+        animation: isJustCompleted ? 'completeFlash 1s ease forwards' : 'none',
       }}
     >
       <ContextMenu visible={hovered} open={menuOpen} onToggle={() => setMenuOpen(o => !o)} onRemove={() => { setMenuOpen(false); onRemove(course) }} menuRef={menuRef} isLeaflet={isLeaflet} />
