@@ -1,95 +1,80 @@
 import React, { useState, useRef } from 'react'
 
-// Componente NavItem riutilizzabile per la sidebar
-// Supporta modalità collapsed (solo icona + tooltip) e modalità espansa (icona + label)
-function NavItem({ icon, label, active, onClick, disabled, badge, collapsed }) {
+// collapsed    → valore ritardato (contentCollapsed da Sidebar) — governa layout/justify-content
+// labelNow     → valore immediato (collapsed da Sidebar) — il label sparisce subito all'avvio della chiusura
+function NavItem({ icon, label, active, onClick, disabled, badge, collapsed, labelNow }) {
   const [hovered, setHovered] = useState(false)
-  const [tooltipY, setTooltipY] = useState(0)
   const ref = useRef(null)
+  const [tooltipY, setTooltipY] = useState(0)
 
-  const handleMouseEnter = () => {
-    if (collapsed && ref.current) {
-      const rect = ref.current.getBoundingClientRect()
-      setTooltipY(rect.top + rect.height / 2)
-    }
-    setHovered(true)
-  }
+  const hideLabel = collapsed || labelNow
 
-  if (collapsed) {
-    // ── Modalità icon-only — icona centrata + tooltip al hover ──
-    return (
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-        <div
-          ref={ref}
-          onClick={disabled ? undefined : onClick}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={() => setHovered(false)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 36, height: 36, borderRadius: 'var(--radius-md)',
-            margin: '0 auto 2px',
-            cursor: disabled ? 'default' : 'pointer',
-            opacity: disabled ? 0.4 : 1,
-            background: active ? 'var(--bg-primary)' : hovered ? 'var(--bg-tertiary)' : 'transparent',
-            border: active ? '0.5px solid var(--border)' : '0.5px solid transparent',
-            color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-            transition: 'all 0.15s',
-          }}
-        >
-          {icon}
-        </div>
+  return (
+    <div ref={ref} style={{ position: 'relative', marginBottom: 2 }}>
+      <div
+        onClick={disabled ? undefined : onClick}
+        onMouseEnter={() => {
+          if (collapsed && ref.current) setTooltipY(ref.current.getBoundingClientRect().top + ref.current.getBoundingClientRect().height / 2)
+          setHovered(true)
+        }}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          // gap a 0 appena il label è nascosto — elimina lo spazio fantasma che sfasa l'icona
+          gap: hideLabel ? 0 : 8,
+          padding: '7px 10px',
+          borderRadius: 'var(--radius-md)',
+          cursor: disabled ? 'default' : 'pointer',
+          opacity: disabled ? 0.4 : 1,
+          background: active ? 'var(--bg-primary)' : hovered ? 'var(--bg-tertiary)' : 'transparent',
+          border: active ? '0.5px solid var(--border)' : '0.5px solid transparent',
+          transition: 'background 0.15s',
+          color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+          overflow: 'hidden',
+        }}
+      >
+        <span style={{ flexShrink: 0, display: 'flex' }}>{icon}</span>
 
-        {/* Tooltip al hover */}
-        {hovered && !disabled && (
-          <div style={{
-            position: 'fixed',
-            left: 60,
-            top: tooltipY,
-            transform: 'translateY(-50%)',
-            background: 'var(--bg-primary)',
-            border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '4px 10px',
-            fontSize: 12, color: 'var(--text-primary)',
+        <span style={{
+          fontSize: 13,
+          opacity: hideLabel ? 0 : 1,
+          maxWidth: hideLabel ? 0 : 160,
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          display: 'block',
+          // opacity veloce (segue subito il gesto), maxWidth più lento (segue la CSS width della sidebar)
+          transition: 'opacity 0.1s ease, max-width 0.22s ease',
+        }}>
+          {label}
+        </span>
+
+        {badge && (
+          <span style={{
+            marginLeft: 'auto', fontSize: 10, flexShrink: 0,
+            color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)',
+            padding: '1px 6px', borderRadius: 10,
+            opacity: hideLabel ? 0 : 1,
+            maxWidth: hideLabel ? 0 : 60,
+            overflow: 'hidden',
             whiteSpace: 'nowrap',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            pointerEvents: 'none',
-            zIndex: 1000,
-          }}>
-            {label}
-            {badge && <span style={{ marginLeft: 6, color: 'var(--text-tertiary)' }}>{badge}</span>}
-          </div>
+            transition: 'opacity 0.1s ease, max-width 0.22s ease',
+          }}>{badge}</span>
         )}
       </div>
-    )
-  }
 
-  // ── Modalità espansa — icona + label ──
-  return (
-    <div
-      onClick={disabled ? undefined : onClick}
-      onMouseEnter={e => { if (!disabled && !active) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '7px 10px',
-        borderRadius: 'var(--radius-md)', marginBottom: 2,
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.4 : 1,
-        background: active ? 'var(--bg-primary)' : 'transparent',
-        border: active ? '0.5px solid var(--border)' : '0.5px solid transparent',
-        transition: 'background 0.15s',
-        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-      }}
-    >
-      {icon}
-      <span style={{ fontSize: 13 }}>{label}</span>
-      {badge && (
-        <span style={{
-          marginLeft: 'auto', fontSize: 10,
-          color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)',
-          padding: '1px 6px', borderRadius: 10,
-        }}>{badge}</span>
+      {/* Tooltip — solo in modalità collapsed */}
+      {collapsed && hovered && !disabled && (
+        <div style={{
+          position: 'fixed', left: 60, top: tooltipY, transform: 'translateY(-50%)',
+          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-sm)', padding: '4px 10px',
+          fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)', pointerEvents: 'none', zIndex: 1000,
+        }}>
+          {label}
+          {badge && <span style={{ marginLeft: 6, color: 'var(--text-tertiary)' }}>{badge}</span>}
+        </div>
       )}
     </div>
   )

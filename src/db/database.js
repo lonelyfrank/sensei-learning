@@ -62,6 +62,8 @@ db.exec(`
 const migrations = [
   // v1.1 — aggiunge il tipo di artifact (sentiero/leaflet)
   `ALTER TABLE courses ADD COLUMN type TEXT DEFAULT 'sentiero'`,
+  // v1.0 — flag schermata di benvenuto al primo avvio
+  `ALTER TABLE user ADD COLUMN welcomed INTEGER DEFAULT 0`,
 ]
 
 for (const migration of migrations) {

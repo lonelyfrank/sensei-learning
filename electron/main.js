@@ -268,6 +268,18 @@ ipcMain.handle('get-user', () => {
   return db.prepare('SELECT * FROM user WHERE id = 1').get()
 })
 
+// Controlla se l'utente ha già visto la schermata di benvenuto
+ipcMain.handle('get-welcomed', () => {
+  const row = db.prepare('SELECT welcomed FROM user WHERE id = 1').get()
+  return row?.welcomed === 1
+})
+
+// Segna la schermata di benvenuto come vista
+ipcMain.handle('set-welcomed', () => {
+  db.prepare('UPDATE user SET welcomed = 1 WHERE id = 1').run()
+  return { success: true }
+})
+
 // Aggiorna il profilo utente
 ipcMain.handle('update-user', (event, name, avatar) => {
   db.prepare('UPDATE user SET name = ?, avatar = ? WHERE id = 1').run(name, avatar)

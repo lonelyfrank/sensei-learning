@@ -50,6 +50,10 @@ contextBridge.exposeInMainWorld('sensei', {
   updateUser: (name, avatar) => ipcRenderer.invoke('update-user', name, avatar),
 
   // Apre un URL nel browser esterno del sistema
-  openExternal: (url) => ipcRenderer.invoke('open-external', url), 
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  // Schermata di benvenuto — primo avvio
+  getWelcomed: () => ipcRenderer.invoke('get-welcomed'),
+  setWelcomed: () => ipcRenderer.invoke('set-welcomed'),
 
 })

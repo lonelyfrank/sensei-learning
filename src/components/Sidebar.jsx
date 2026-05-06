@@ -8,6 +8,7 @@ const BULGE_RADIUS = 18
 const BULGE_HEIGHT = 65
 const TRIGGER_ZONE = 40
 const LERP_SPEED = 0.10
+const LERP_SPEED_WIDTH = 0.28  // più veloce per seguire la CSS transition da 0.2s
 const SIDEBAR_WIDTH_EXPANDED = 220
 const SIDEBAR_WIDTH_COLLAPSED = 52
 
@@ -26,33 +27,45 @@ function buildBulgePath(y, radius, height, sidebarWidth) {
   `
 }
 
-/* Effetto bulge sul bordo destro della sidebar
-   disabled=true quando un artifact è aperto nell'iframe — il mouse
-   entra nel contesto dell'iframe e il window principale non riceve
-   più eventi mousemove, lasciando la bulge bloccata */
-function SidebarBulge({ sidebarWidth, collapsed, onToggle, disabled }) {
-  const stateRef = useRef({ mouseY: 0, currentY: 300, currentRadius: 0, targetRadius: 0, rafId: null })
+/* Effetto bulge sul bordo destro della sidebar */
+function SidebarBulge({ sidebarWidth, collapsed, onToggle }) {
+  const stateRef = useRef({
+    mouseY: 0, currentY: 300, currentRadius: 0, targetRadius: 0,
+    currentSidebarWidth: sidebarWidth, targetSidebarWidth: sidebarWidth,
+    rafId: null,
+  })
   const svgRef = useRef(null)
   const pathRef = useRef(null)
   const circleGroupRef = useRef(null)
+
+  // Quando sidebarWidth cambia, aggiorna il target — il lerp del RAF fa il resto
+  useEffect(() => {
+    stateRef.current.targetSidebarWidth = sidebarWidth
+  }, [sidebarWidth])
 
   const animate = useCallback(() => {
     const s = stateRef.current
     s.currentY = lerp(s.currentY, s.mouseY, LERP_SPEED)
     s.currentRadius = lerp(s.currentRadius, s.targetRadius, LERP_SPEED)
+    s.currentSidebarWidth = lerp(s.currentSidebarWidth, s.targetSidebarWidth, LERP_SPEED_WIDTH)
+
+    const sw = s.currentSidebarWidth
 
     if (pathRef.current) {
-      pathRef.current.setAttribute('d', buildBulgePath(s.currentY, s.currentRadius, BULGE_HEIGHT, sidebarWidth))
+      pathRef.current.setAttribute('d', buildBulgePath(s.currentY, s.currentRadius, BULGE_HEIGHT, sw))
     }
     if (circleGroupRef.current) {
       const opacity = Math.min(s.currentRadius / BULGE_RADIUS, 1)
-      const cx = sidebarWidth + s.currentRadius * 0.75
+      const cx = sw + s.currentRadius * 0.75
       circleGroupRef.current.setAttribute('transform', `translate(${cx}, ${s.currentY})`)
       circleGroupRef.current.style.opacity = opacity
     }
+    if (svgRef.current) {
+      svgRef.current.style.width = `${sw + BULGE_RADIUS + 20}px`
+    }
 
     s.rafId = requestAnimationFrame(animate)
-  }, [sidebarWidth])
+  }, [])
 
   useEffect(() => {
     const s = stateRef.current
@@ -63,14 +76,9 @@ function SidebarBulge({ sidebarWidth, collapsed, onToggle, disabled }) {
   useEffect(() => {
     const handleMouseMove = (e) => {
       const s = stateRef.current
-      // Se disabilitato (iframe aperto) azzera subito e non aggiornare
-      if (disabled) {
-        s.targetRadius = 0
-        return
-      }
-      const distFromEdge = Math.abs(e.clientX - sidebarWidth)
+      const distFromEdge = Math.abs(e.clientX - s.currentSidebarWidth)
       s.mouseY = e.clientY - 40
-      if (distFromEdge < TRIGGER_ZONE && e.clientX >= sidebarWidth - 10) {
+      if (distFromEdge < TRIGGER_ZONE && e.clientX >= s.currentSidebarWidth - 10) {
         const proximity = 1 - (distFromEdge / TRIGGER_ZONE)
         s.targetRadius = BULGE_RADIUS * proximity
       } else {
@@ -84,12 +92,7 @@ function SidebarBulge({ sidebarWidth, collapsed, onToggle, disabled }) {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseleave', handleMouseLeave)
     }
-  }, [sidebarWidth, disabled])
-
-  // Quando disabled cambia a true, forza subito targetRadius a 0
-  useEffect(() => {
-    if (disabled) stateRef.current.targetRadius = 0
-  }, [disabled])
+  }, [])
 
   return (
     <svg
@@ -128,7 +131,26 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
   const activeLeaflet = courses.filter(c => c.type === 'leaflet' && c.progress > 0)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [menuY, setMenuY] = useState(0)
-  const menuButtonRef = useRef(null)
+  const expandedMenuRef = useRef(null)   // profilo espanso
+  const collapsedMenuRef = useRef(null)  // profilo collassato — usato per menuY
+  const timerRef = useRef(null)
+
+  // contentCollapsed guida la visibilità dei contenuti con il timing corretto:
+  // — collapse: ritardato di 210ms (aspetta che la CSS width transition finisca)
+  // — expand: immediato (i label appaiono mentre la sidebar cresce, clippati da overflow)
+  const [contentCollapsed, setContentCollapsed] = useState(collapsed)
+
+  useEffect(() => {
+    clearTimeout(timerRef.current)
+    if (collapsed) {
+      timerRef.current = setTimeout(() => setContentCollapsed(true), 210)
+    } else {
+      setContentCollapsed(false)
+    }
+    // Chiude il menu profilo ad ogni cambio di stato
+    setProfileMenuOpen(false)
+    return () => clearTimeout(timerRef.current)
+  }, [collapsed])
 
   const sidebarWidth = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED
 
@@ -140,9 +162,12 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
     .slice(0, 2)
 
   const handleMenuToggle = () => {
-    if (!profileMenuOpen && menuButtonRef.current) {
-      const rect = menuButtonRef.current.getBoundingClientRect()
-      setMenuY(rect.top)
+    if (!profileMenuOpen) {
+      const ref = contentCollapsed ? collapsedMenuRef : expandedMenuRef
+      if (ref.current) {
+        const rect = ref.current.getBoundingClientRect()
+        setMenuY(rect.top)
+      }
     }
     setProfileMenuOpen(o => !o)
   }
@@ -164,82 +189,99 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
         {/* ── TOP: Logo Sensei ── */}
         <div style={{
           display: 'flex', alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: collapsed ? '12px 0' : '12px 14px',
+          justifyContent: 'flex-start',
+          padding: '12px 7px',
           borderBottom: '0.5px solid var(--border)', flexShrink: 0,
           gap: 8,
         }}>
           <SenseiLogo style={{ width: 38, height: 38, color: 'var(--logo-color)', flexShrink: 0 }} />
-          {!collapsed && (
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-              Sensei
-            </span>
-          )}
+          <span style={{
+            fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px',
+            opacity: collapsed ? 0 : 1,
+            maxWidth: contentCollapsed ? 0 : 120,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            transition: 'opacity 0.1s ease, max-width 0.22s ease',
+          }}>
+            Sensei
+          </span>
         </div>
 
         {/* ── NAV PRINCIPALE ── */}
-        <div style={{ padding: collapsed ? '12px 0' : '12px 8px 8px', flexShrink: 0 }}>
-          <NavItem collapsed={collapsed} icon={<GridIcon />} label="I miei sentieri" active={currentView === 'home'} onClick={() => onNavigate('home')} />
-          <NavItem collapsed={collapsed} icon={<PlusIcon />} label="Importa" onClick={onImport} />
-          <NavItem collapsed={collapsed} icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
-          <NavItem collapsed={collapsed} icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
+        <div style={{ padding: collapsed ? '12px 0' : '12px 8px 8px', flexShrink: 0, transition: 'padding 0.2s ease' }}>
+          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<GridIcon />} label="I miei sentieri" active={currentView === 'home'} onClick={() => onNavigate('home')} />
+          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<PlusIcon />} label="Importa" onClick={onImport} />
+          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
+          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
         </div>
 
-        {/* ── IN CORSO — solo sentieri — nascosto quando collassato ── */}
-        {!collapsed && (
-          <>
-            <div style={{ padding: '8px 16px 6px', flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In corso</span>
-            </div>
-            <div style={{ padding: '0 8px', flexShrink: 0 }}>
-              {activeSentieri.length === 0 && (
-                <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
-              )}
-              {activeSentieri.map(course => (
-                <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} />
-              ))}
-            </div>
-
-            {/* ── LEAFLET ATTIVI ── */}
-            {activeLeaflet.length > 0 && (
-              <>
-                <div style={{ padding: '8px 16px 6px', flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaflet</span>
-                </div>
-                <div style={{ padding: '0 8px', flexShrink: 0 }}>
-                  {activeLeaflet.map(course => (
-                    <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} showProgress={false} />
-                  ))}
-                </div>
-              </>
+        {/* ── IN CORSO — opacity immediata, maxHeight ritardata ── */}
+        <div style={{
+          overflow: 'hidden',
+          maxHeight: contentCollapsed ? 0 : 400,
+          opacity: collapsed ? 0 : 1,
+          transition: 'max-height 0.22s ease, opacity 0.1s ease',
+          flexShrink: 0,
+        }}>
+          <div style={{ padding: '8px 16px 6px' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In corso</span>
+          </div>
+          <div style={{ padding: '0 8px' }}>
+            {activeSentieri.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
             )}
-          </>
-        )}
+            {activeSentieri.map(course => (
+              <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} />
+            ))}
+          </div>
+
+          {/* ── LEAFLET ATTIVI ── */}
+          {activeLeaflet.length > 0 && (
+            <>
+              <div style={{ padding: '8px 16px 6px' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaflet</span>
+              </div>
+              <div style={{ padding: '0 8px' }}>
+                {activeLeaflet.map(course => (
+                  <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} showProgress={false} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Spacer scrollabile */}
         <div style={{ flex: 1, overflowY: 'auto' }} />
 
         {/* ── BOTTOM: Profilo + menu ── */}
-        <div style={{ borderTop: '0.5px solid var(--border)', padding: collapsed ? '10px 0' : '10px 8px', flexShrink: 0, position: 'relative' }}>
+        <div style={{ borderTop: '0.5px solid var(--border)', padding: '6px 8px', flexShrink: 0, position: 'relative' }}>
 
-          {/* Menu espanso */}
-          {profileMenuOpen && !collapsed && (
-            <div style={{ position: 'absolute', bottom: '100%', left: 8, right: 8, background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-              <MenuButton icon={<ProgressIcon />} label="Progressi" onClick={() => { setProfileMenuOpen(false); onOpenProgress() }} />
-              <MenuButton icon={<SettingsIcon />} label="Impostazioni" onClick={() => { setProfileMenuOpen(false); onOpenSettings() }} />
-              <div style={{ height: '0.5px', background: 'var(--border)', margin: '2px 0' }} />
-              <MenuButton icon={<HelpIcon />} label="Aiuto" onClick={() => { setProfileMenuOpen(false); window.sensei.openExternal('https://github.com/lonelyfrank/sensei-learning') }} />
-            </div>
-          )}
+          {/* ── Menu espanso — sempre renderizzato, scorre da sotto ── */}
+          <div style={{
+            position: 'absolute', bottom: '100%', left: 8, right: 8,
+            background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 4,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            opacity: profileMenuOpen && !contentCollapsed ? 1 : 0,
+            transform: profileMenuOpen && !contentCollapsed ? 'translateY(0)' : 'translateY(6px)',
+            pointerEvents: profileMenuOpen && !contentCollapsed ? 'auto' : 'none',
+            transition: 'opacity 0.18s ease, transform 0.18s ease',
+          }}>
+            <MenuButton icon={<ProgressIcon />} label="Progressi" onClick={() => { setProfileMenuOpen(false); onOpenProgress() }} />
+            <MenuButton icon={<SettingsIcon />} label="Impostazioni" onClick={() => { setProfileMenuOpen(false); onOpenSettings() }} />
+            <div style={{ height: '0.5px', background: 'var(--border)', margin: '2px 0' }} />
+            <MenuButton icon={<HelpIcon />} label="Aiuto" onClick={() => { setProfileMenuOpen(false); window.sensei.openExternal('https://github.com/lonelyfrank/sensei-learning') }} />
+          </div>
 
-          {/* Menu collassato — position fixed */}
-          {profileMenuOpen && collapsed && (
+          {/* ── Menu collassato — position fixed, scorre da sinistra ── */}
+          {profileMenuOpen && contentCollapsed && (
             <div style={{
               position: 'fixed', left: 56, top: menuY,
               transform: 'translateY(-100%)',
               width: 180, background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
               overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000,
+              animation: 'slideInLeft 0.18s ease',
             }}>
               <MenuButton icon={<ProgressIcon />} label="Progressi" onClick={() => { setProfileMenuOpen(false); onOpenProgress() }} />
               <MenuButton icon={<SettingsIcon />} label="Impostazioni" onClick={() => { setProfileMenuOpen(false); onOpenSettings() }} />
@@ -248,40 +290,63 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
             </div>
           )}
 
+          {/* ── Sezione profilo: crossfade grid tra espanso e collassato ── */}
+
           {/* Profilo espanso */}
-          {!collapsed && (
-            <div
-              ref={menuButtonRef}
-              onClick={handleMenuToggle}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: profileMenuOpen ? 'var(--bg-tertiary)' : 'transparent' }}
-              onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
-              onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent' }}
-            >
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)' }}>
-                {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-              </div>
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Utente'}</p>
-                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  {activeSentieri.length} sentier{activeSentieri.length === 1 ? 'o' : 'i'} attiv{activeSentieri.length === 1 ? 'o' : 'i'}
-                  {activeLeaflet.length > 0 && ` · ${activeLeaflet.length} leaflet`}
-                </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateRows: contentCollapsed ? '0fr' : '1fr',
+            opacity: contentCollapsed ? 0 : 1,
+            pointerEvents: contentCollapsed ? 'none' : 'auto',
+            transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
+          }}>
+            <div style={{ overflow: 'hidden' }}>
+              <div
+                ref={expandedMenuRef}
+                onClick={handleMenuToggle}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: profileMenuOpen ? 'var(--bg-tertiary)' : 'transparent' }}
+                onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
+                onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent' }}
+              >
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)' }}>
+                  {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Utente'}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                    {activeSentieri.length} sentier{activeSentieri.length === 1 ? 'o' : 'i'} attiv{activeSentieri.length === 1 ? 'o' : 'i'}
+                    {activeLeaflet.length > 0 && ` · ${activeLeaflet.length} leaflet`}
+                  </p>
+                </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Profilo collassato — solo avatar */}
-          {collapsed && (
-            <div ref={menuButtonRef} onClick={handleMenuToggle} style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateRows: contentCollapsed ? '1fr' : '0fr',
+            opacity: contentCollapsed ? 1 : 0,
+            pointerEvents: contentCollapsed ? 'auto' : 'none',
+            transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
+          }}>
+            <div style={{ overflow: 'hidden' }}>
               <div
-                style={{ width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                ref={collapsedMenuRef}
+                onClick={handleMenuToggle}
+                style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}
               >
-                {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                <div
+                  style={{ width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                </div>
               </div>
             </div>
-          )}
+          </div>
+
         </div>
       </div>
 

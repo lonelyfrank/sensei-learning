@@ -8,6 +8,7 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
   const [lucideBundle, setLucideBundle] = useState(null)
   const [error, setError] = useState(null)
   const iframeRef = useRef(null)
+  const [reloadKey, setReloadKey] = useState(0)
   // Tiene traccia se il completamento è già stato notificato in questa sessione
   const completedNotified = useRef(false)
 
@@ -18,6 +19,21 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [course.id])
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'F5') { e.preventDefault(); reloadCourse() }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
+
+  const reloadCourse = () => {
+    setCourseCode(null)
+    completedNotified.current = false
+    loadCourse()
+    setReloadKey(k => k + 1)
+  }
 
   const loadCourse = async () => {
     try {
@@ -231,6 +247,22 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
             {course.name}
           </span>
         </div>
+
+        <button
+          onClick={reloadCourse}
+          title="Ricarica artifact (F5)"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 30, height: 30, borderRadius: 'var(--radius-md)',
+            border: '0.5px solid var(--border)', color: 'var(--text-secondary)',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+            <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 3.9 1.6L13.5 2.5V6h-3.5l1.3-1.3A4 4 0 1 0 12 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
 
       {/* ── CONTENUTO ARTIFACT ── */}
@@ -249,6 +281,7 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
         {!error && courseCode && lucideBundle && (
           <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <iframe
+              key={reloadKey}
               ref={iframeRef}
               srcDoc={generateHTML(courseCode, lucideBundle)}
               style={{ width: '100%', height: '100%', border: 'none' }}

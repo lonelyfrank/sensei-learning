@@ -1,5 +1,5 @@
 // ─── App.jsx ─────────────────────────────────────────────────────────────────
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Home from './pages/Home.jsx'
 import Course from './pages/Course.jsx'
@@ -12,6 +12,7 @@ import CreateSentieroAI from './create/sentiero-ai/CreateSentieroAI.jsx'
 import CreateLeafletAI from './create/leaflet-ai/CreateLeafletAI.jsx'
 import Toast from './components/Toast.jsx'
 import { useToast } from './hooks/useToast.js'
+import SenseiLogo from './assets/sensei-logo.svg?react'
 
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
@@ -35,12 +36,16 @@ function App() {
   const [importDialog, setImportDialog] = useState(null)
   // Id del sentiero appena completato — usato per animare la card in Home
   const [justCompleted, setJustCompleted] = useState(null)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [viewOpacity, setViewOpacity] = useState(1)
+  const viewTransitionRef = useRef(null)
 
   const { toasts, removeToast, toastComplete } = useToast()
 
   useEffect(() => {
     loadCourses()
     loadUser()
+    window.sensei.getWelcomed().then(seen => { if (!seen) setShowWelcome(true) })
   }, [])
 
   const loadUser = async () => {
@@ -68,9 +73,14 @@ function App() {
   }
 
   const handleNavigate = (view, course = null) => {
-    setCurrentView(view)
-    setSelectedCourse(course)
-    setCurrentCreateMode(null)
+    clearTimeout(viewTransitionRef.current)
+    setViewOpacity(0)
+    viewTransitionRef.current = setTimeout(() => {
+      setCurrentView(view)
+      setSelectedCourse(course)
+      setCurrentCreateMode(null)
+      setViewOpacity(1)
+    }, 150)
   }
 
   // Gestisce il completamento di un sentiero — toast + animazione card
@@ -97,8 +107,15 @@ function App() {
     loadCourses()
   }
 
-  const handleRemove = async (course) => {
-    await window.sensei.removeCourse(course.id, course.filename)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
+  const handleRemove = (course) => {
+    setConfirmDelete(course)
+  }
+
+  const handleRemoveConfirm = async () => {
+    await window.sensei.removeCourse(confirmDelete.id, confirmDelete.filename)
+    setConfirmDelete(null)
     loadCourses()
   }
 
@@ -122,7 +139,7 @@ function App() {
           onOpenProgress={() => handleNavigate('progress')}
         />
 
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: viewOpacity, transition: 'opacity 0.15s ease' }}>
 
           {currentView === 'home' && (
             <Home
@@ -180,6 +197,21 @@ function App() {
         </div>
       </div>
 
+      {showWelcome && (
+        <WelcomeDialog
+          onDismiss={() => { window.sensei.setWelcomed(); setShowWelcome(false) }}
+          onImport={() => { window.sensei.setWelcomed(); setShowWelcome(false); handleImport() }}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDeleteDialog
+          course={confirmDelete}
+          onConfirm={handleRemoveConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {importDialog && (
         <ImportDialog
           suggestedName={importDialog.suggestedName}
@@ -236,6 +268,105 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             Importa
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WelcomeDialog({ onDismiss, onImport }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '40px 40px 32px', width: 480, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+        {/* Logo */}
+        <div style={{ width: 52, height: 52, marginBottom: 20, color: 'var(--logo-color)' }}>
+          <SenseiLogo width={52} height={52} />
+        </div>
+
+        {/* Titolo */}
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', textAlign: 'center' }}>
+          Benvenuto in Sensei
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 28px', textAlign: 'center', lineHeight: 1.5 }}>
+          La tua piattaforma di apprendimento personale.<br />
+          Carica artifact JSX interattivi generati con Claude AI.
+        </p>
+
+        {/* Card concetti */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%', marginBottom: 28 }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 14px' }}>
+            <div style={{ fontSize: 18, marginBottom: 8 }}>🧭</div>
+            <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Sentieri</p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Percorsi progressivi con step, XP e progressi tracciati nel tempo.</p>
+          </div>
+          <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 14px' }}>
+            <div style={{ fontSize: 18, marginBottom: 8 }}>📄</div>
+            <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Leaflet</p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Documenti interattivi da consultare in sessione singola.</p>
+          </div>
+        </div>
+
+        {/* Azioni */}
+        <button
+          onClick={onImport}
+          autoFocus
+          style={{ width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', marginBottom: 10, transition: 'opacity 0.15s', cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          Importa il tuo primo artifact
+        </button>
+        <button
+          onClick={onDismiss}
+          style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
+        >
+          Inizia a esplorare
+        </button>
+
+      </div>
+    </div>
+  )
+}
+
+function ConfirmDeleteDialog({ course, onConfirm, onCancel }) {
+  const isLeaflet = course.type === 'leaflet'
+  const tipo = isLeaflet ? 'leaflet' : 'sentiero'
+
+  React.useEffect(() => {
+    const handle = (e) => { if (e.key === 'Escape') onCancel() }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, width: 360 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, color: 'var(--text-primary)' }}>Elimina {tipo}</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+          Sei sicuro di voler eliminare <strong style={{ color: 'var(--text-primary)' }}>{course.name}</strong>?
+          {!isLeaflet && <><br /><span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>I progressi associati verranno persi.</span></>}
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            autoFocus
+            style={{ padding: '7px 16px', fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Annulla
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ padding: '7px 16px', fontSize: 13, color: '#fff', background: '#E24B4A', border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Elimina
           </button>
         </div>
       </div>
