@@ -64,19 +64,6 @@ function detectArtifactMeta(code) {
 
   // ── LIVELLO 2: array named — cerca array di oggetti comuni ──
   // Supporta: STEPS, DAYS, LESSONS, CHAPTERS, RECIPES, INGREDIENTS, MODULES, TASKS
-  const arrayPatterns = [
-    /const\s+STEPS\s*=\s*\[/,
-    /const\s+DAYS\s*=\s*\[/,
-    /const\s+LESSONS\s*=\s*\[/,
-    /const\s+CHAPTERS\s*=\s*\[/,
-    /const\s+MODULES\s*=\s*\[/,
-    /const\s+TASKS\s*=\s*\[/,
-    /const\s+RECIPES\s*=\s*\[/,
-    /const\s+INGREDIENTS\s*=\s*\[/,
-    /const\s+steps\s*=\s*\[/,
-    /const\s+days\s*=\s*\[/,
-  ]
-
   // Cerca il nome dell'array per contarne gli elementi
   const namedArrayMatch = code.match(/const\s+(STEPS|DAYS|LESSONS|CHAPTERS|MODULES|TASKS|RECIPES|steps|days|lessons)\s*=\s*\[/)
   if (namedArrayMatch) {
@@ -119,12 +106,16 @@ function detectArtifactMeta(code) {
   return { type: 'sentiero', totalSteps }
 }
 
-// Copia il file scelto nella cartella /courses e lo registra nel database
+// Copia il file scelto nella cartella /courses e lo registra nel database.
+// mkdirSync con { recursive: true } garantisce che la cartella esista anche
+// al primo avvio o in ambienti in cui non è stata creata manualmente.
 ipcMain.handle('import-course', async (event, filePath, customName, icon, color) => {
-  const filename = path.basename(filePath)
-  const courseId = filename.replace('.jsx', '')
-  const destPath = path.join(app.getAppPath(), 'courses', filename)
+  const filename   = path.basename(filePath)
+  const courseId   = filename.replace('.jsx', '')
+  const coursesDir = path.join(app.getAppPath(), 'courses')
+  const destPath   = path.join(coursesDir, filename)
 
+  fs.mkdirSync(coursesDir, { recursive: true })
   fs.copyFileSync(filePath, destPath)
 
   const code = fs.readFileSync(filePath, 'utf-8')

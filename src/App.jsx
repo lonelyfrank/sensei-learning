@@ -1,4 +1,7 @@
 // ─── App.jsx ─────────────────────────────────────────────────────────────────
+// Orchestratore principale: gestisce navigazione, stato globale e dialoghi modali.
+// Tutti i dati (corsi, utente) vivono qui e scendono ai figli via props.
+
 import React, { useState, useEffect, useRef } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Home from './pages/Home.jsx'
@@ -14,31 +17,46 @@ import Toast from './components/Toast.jsx'
 import { useToast } from './hooks/useToast.js'
 import SenseiLogo from './assets/sensei-logo.svg?react'
 
+// Palette di colori assegnati ai corsi in ordine ciclico quando l'artifact
+// non specifica un colore proprio.
 const COURSE_COLORS = [
   '#378ADD', '#1D9E75', '#7F77DD', '#D85A30',
   '#D4537E', '#BA7517', '#639922', '#E24B4A',
 ]
 
+// Trasforma un courseId (es. "react-basics_2024") in un nome leggibile
+// capitalizzando ogni parola e normalizzando trattini e underscore.
 function formatCourseName(id) {
   return id
-    .replace(/-/g, ' ')
-    .replace(/_/g, ' ')
+    .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function App() {
-  const [collapsed, setCollapsed] = useState(false)
-  const [currentView, setCurrentView] = useState('home')
+  // ── Stato navigazione ────────────────────────────────────────────────────────
+  const [collapsed, setCollapsed]           = useState(false)
+  const [currentView, setCurrentView]       = useState('home')
   const [currentCreateMode, setCurrentCreateMode] = useState(null)
   const [selectedCourse, setSelectedCourse] = useState(null)
+
+  // ── Dati applicazione ────────────────────────────────────────────────────────
   const [courses, setCourses] = useState([])
-  const [user, setUser] = useState({ name: 'Utente', avatar: null })
-  const [importDialog, setImportDialog] = useState(null)
-  // Id del sentiero appena completato — usato per animare la card in Home
+  const [user, setUser]       = useState({ name: 'Utente', avatar: null })
+
+  // ── Stato dialoghi modali ────────────────────────────────────────────────────
+  const [importDialog, setImportDialog]   = useState(null)   // dati del file da importare
+  const [confirmDelete, setConfirmDelete] = useState(null)   // corso da eliminare
+
+  // ── Feedback utente ──────────────────────────────────────────────────────────
+  // justCompleted: id del sentiero appena completato, usato per animare la card in Home
   const [justCompleted, setJustCompleted] = useState(null)
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [viewOpacity, setViewOpacity] = useState(1)
-  const viewTransitionRef = useRef(null)
+  const [showWelcome, setShowWelcome]     = useState(false)
+
+  // ── Transizione di vista ─────────────────────────────────────────────────────
+  // Fade-out (150ms) → cambio vista → fade-in. Il ref evita timeout sovrapposti
+  // se l'utente naviga velocemente prima che la transizione sia completa.
+  const [viewOpacity, setViewOpacity]   = useState(1)
+  const viewTransitionRef               = useRef(null)
 
   const { toasts, removeToast, toastComplete } = useToast()
 
@@ -53,25 +71,29 @@ function App() {
     if (result) setUser(result)
   }
 
+  // Carica tutti i corsi dal DB e arricchisce ogni elemento con il progresso
+  // calcolato (percentuale, giorni completati, giorni totali) e un colore di default.
   const loadCourses = async () => {
     const result = await window.sensei.getCourses()
     const coursesWithProgress = await Promise.all(
       result.map(async (course, index) => {
-        const progress = await window.sensei.getProgress(course.id)
+        const progress  = await window.sensei.getProgress(course.id)
         const completed = progress.filter(p => p.completed).length
-        const total = course.total_days || 1
+        const total     = course.total_days || 1
         return {
           ...course,
-          color: course.color || COURSE_COLORS[index % COURSE_COLORS.length],
-          progress: total > 0 ? Math.round((completed / total) * 100) : 0,
+          color:         course.color || COURSE_COLORS[index % COURSE_COLORS.length],
+          progress:      total > 0 ? Math.round((completed / total) * 100) : 0,
           completedDays: completed,
-          totalDays: total,
+          totalDays:     total,
         }
       })
     )
     setCourses(coursesWithProgress)
   }
 
+  // Naviga verso una vista con fade-out/fade-in da 150ms.
+  // Cancella eventuali transizioni già in corso prima di avviarne una nuova.
   const handleNavigate = (view, course = null) => {
     clearTimeout(viewTransitionRef.current)
     setViewOpacity(0)
@@ -83,21 +105,24 @@ function App() {
     }, 150)
   }
 
-  // Gestisce il completamento di un sentiero — toast + animazione card
+  // Notifica il completamento di un sentiero: mostra il toast e avvia
+  // l'animazione della card in Home. Il flag si resetta dopo 2s (durata animazione).
   const handleComplete = (courseName, courseId) => {
     toastComplete(courseName)
     setJustCompleted(courseId)
-    // Resetta dopo 2s — durata animazione card
     setTimeout(() => setJustCompleted(null), 2000)
   }
 
+  // Apre il dialog di sistema per selezionare un file .jsx.
+  // Usa regex /[\\/]/ per estrarre il basename in modo cross-platform
+  // (Windows usa \ come separatore, macOS/Linux usano /).
   const handleImport = async () => {
     const result = await window.sensei.openFileDialog()
     if (result.canceled) return
-    const filePath = result.filePaths[0]
-    const filename = filePath.split('/').pop()
-    const courseId = filename.replace('.jsx', '')
-    const suggestedName = formatCourseName(courseId)
+    const filePath       = result.filePaths[0]
+    const filename       = filePath.split(/[\\/]/).pop()
+    const courseId       = filename.replace('.jsx', '')
+    const suggestedName  = formatCourseName(courseId)
     setImportDialog({ filePath, suggestedName, icon: 'BookOpen', color: '#378ADD' })
   }
 
@@ -107,11 +132,7 @@ function App() {
     loadCourses()
   }
 
-  const [confirmDelete, setConfirmDelete] = useState(null)
-
-  const handleRemove = (course) => {
-    setConfirmDelete(course)
-  }
+  const handleRemove = (course) => setConfirmDelete(course)
 
   const handleRemoveConfirm = async () => {
     await window.sensei.removeCourse(confirmDelete.id, confirmDelete.filename)
@@ -139,7 +160,11 @@ function App() {
           onOpenProgress={() => handleNavigate('progress')}
         />
 
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: viewOpacity, transition: 'opacity 0.15s ease' }}>
+        {/* Area contenuto principale — opacità animata durante le transizioni di vista */}
+        <div style={{
+          flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          opacity: viewOpacity, transition: 'opacity 0.15s ease',
+        }}>
 
           {currentView === 'home' && (
             <Home
@@ -162,17 +187,11 @@ function App() {
           )}
 
           {currentView === 'settings' && (
-            <Settings
-              onBack={() => handleNavigate('home')}
-              onSave={loadUser}
-            />
+            <Settings onBack={() => handleNavigate('home')} onSave={loadUser} />
           )}
 
           {currentView === 'progress' && (
-            <Progress
-              onBack={() => handleNavigate('home')}
-              courses={courses}
-            />
+            <Progress onBack={() => handleNavigate('home')} courses={courses} />
           )}
 
           {currentView === 'create' && !currentCreateMode && (
@@ -184,19 +203,17 @@ function App() {
           )}
 
           {currentView === 'create' && currentCreateMode === 'sentiero-ai' && (
-            <CreateSentieroAI
-              onBack={() => setCurrentCreateMode(null)}
-            />
+            <CreateSentieroAI onBack={() => setCurrentCreateMode(null)} />
           )}
 
           {currentView === 'create' && currentCreateMode === 'leaflet-ai' && (
-            <CreateLeafletAI
-              onBack={() => setCurrentCreateMode(null)}
-            />
+            <CreateLeafletAI onBack={() => setCurrentCreateMode(null)} />
           )}
 
         </div>
       </div>
+
+      {/* ── Dialoghi modali ── */}
 
       {showWelcome && (
         <WelcomeDialog
@@ -230,10 +247,20 @@ function App() {
   )
 }
 
+// ─── Dialogo di importazione artifact ────────────────────────────────────────
+// Permette di personalizzare nome, icona e colore prima dell'importazione.
+// Supporta conferma con Invio e chiusura con Esc.
 function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel }) {
-  const [name, setName] = useState(suggestedName)
-  const [icon, setIcon] = useState(defaultIcon)
+  const [name,  setName]  = useState(suggestedName)
+  const [icon,  setIcon]  = useState(defaultIcon)
   const [color, setColor] = useState(defaultColor)
+
+  // Chiusura via tastiera — coerente con ConfirmDeleteDialog
+  React.useEffect(() => {
+    const handle = (e) => { if (e.key === 'Escape') onCancel() }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [])
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
@@ -276,17 +303,18 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
   )
 }
 
+// ─── Schermata di benvenuto (primo avvio) ─────────────────────────────────────
+// Mostrata una sola volta al primo avvio grazie al flag `welcomed` nel DB.
+// Introduce i concetti chiave di Sensei con due card descrittive.
 function WelcomeDialog({ onDismiss, onImport }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
       <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '40px 40px 32px', width: 480, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-        {/* Logo */}
         <div style={{ width: 52, height: 52, marginBottom: 20, color: 'var(--logo-color)' }}>
           <SenseiLogo width={52} height={52} />
         </div>
 
-        {/* Titolo */}
         <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', textAlign: 'center' }}>
           Benvenuto in Sensei
         </h1>
@@ -295,7 +323,6 @@ function WelcomeDialog({ onDismiss, onImport }) {
           Carica artifact JSX interattivi generati con Claude AI.
         </p>
 
-        {/* Card concetti */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%', marginBottom: 28 }}>
           <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 14px' }}>
             <div style={{ fontSize: 18, marginBottom: 8 }}>🧭</div>
@@ -309,7 +336,6 @@ function WelcomeDialog({ onDismiss, onImport }) {
           </div>
         </div>
 
-        {/* Azioni */}
         <button
           onClick={onImport}
           autoFocus
@@ -333,9 +359,12 @@ function WelcomeDialog({ onDismiss, onImport }) {
   )
 }
 
+// ─── Dialogo di conferma eliminazione ────────────────────────────────────────
+// Richiede conferma esplicita prima di rimuovere un artifact e i suoi progressi.
+// Chiude con Esc (annulla) o clic sul pulsante Elimina.
 function ConfirmDeleteDialog({ course, onConfirm, onCancel }) {
   const isLeaflet = course.type === 'leaflet'
-  const tipo = isLeaflet ? 'leaflet' : 'sentiero'
+  const tipo      = isLeaflet ? 'leaflet' : 'sentiero'
 
   React.useEffect(() => {
     const handle = (e) => { if (e.key === 'Escape') onCancel() }
