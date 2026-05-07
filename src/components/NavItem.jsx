@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 
-// collapsed    → valore ritardato (contentCollapsed da Sidebar) — governa layout/justify-content
+// collapsed    → valore ritardato (contentCollapsed da Sidebar) — governa la visibilità del label
 // labelNow     → valore immediato (collapsed da Sidebar) — il label sparisce subito all'avvio della chiusura
 function NavItem({ icon, label, active, onClick, disabled, badge, collapsed, labelNow }) {
   const [hovered, setHovered] = useState(false)
@@ -20,9 +20,8 @@ function NavItem({ icon, label, active, onClick, disabled, badge, collapsed, lab
         onMouseLeave={() => setHovered(false)}
         style={{
           display: 'flex', alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          // gap a 0 appena il label è nascosto — elimina lo spazio fantasma che sfasa l'icona
-          gap: hideLabel ? 0 : 8,
+          justifyContent: 'flex-start',
+          gap: 8,
           padding: '7px 10px',
           borderRadius: 'var(--radius-md)',
           cursor: disabled ? 'default' : 'pointer',

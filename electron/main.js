@@ -14,6 +14,9 @@ function createWindow() {
     height: 800,
     frame: false,
     titleBarStyle: 'hidden',
+    // Evita il flash bianco durante il ripristino da finestra massimizzata:
+    // Electron dipinge questo colore prima che React monti la UI.
+    backgroundColor: '#242424',
     icon: path.join(__dirname, '../public/sensei-logo.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

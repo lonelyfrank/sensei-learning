@@ -1,4 +1,9 @@
+// ─── TitleBar.jsx ────────────────────────────────────────────────────────────
+// Barra del titolo personalizzata (frame: false in Electron).
+// Layout: logo a sinistra, titolo centrato, controlli stile GNOME a destra.
+
 import React, { useState, useEffect } from 'react'
+import SenseiLogo from '../assets/sensei-logo.svg?react'
 
 function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false)
@@ -10,63 +15,70 @@ function TitleBar() {
   const handleMinimize = () => window.sensei.windowMinimize()
   const handleMaximize = async () => {
     await window.sensei.windowMaximize()
-    const maximized = await window.sensei.windowIsMaximized()
-    setIsMaximized(maximized)
+    setIsMaximized(await window.sensei.windowIsMaximized())
   }
   const handleClose = () => window.sensei.windowClose()
 
   return (
-    <div
-      style={{
-        WebkitAppRegion: 'drag',
-        height: 40,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        padding: '0 12px',
-        background: 'var(--bg-secondary)',
-        borderBottom: '0.5px solid var(--border)',
-        flexShrink: 0,
-        userSelect: 'none',
-      }}
-    >
-      {/* Controlli finestra — no drag su questi bottoni */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, WebkitAppRegion: 'no-drag' }}>
+    <div style={{
+      WebkitAppRegion: 'drag',
+      position: 'relative',
+      height: 40,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 10px 0 14px',
+      background: 'var(--bg-secondary)',
+      borderBottom: '0.5px solid var(--border)',
+      flexShrink: 0,
+      userSelect: 'none',
+    }}>
 
-        {/* Minimizza */}
-        <WindowButton onClick={handleMinimize} title="Minimizza">
+      <SenseiLogo style={{ width: 28, height: 28, color: 'var(--logo-color)', flexShrink: 0 }} />
+
+      <span style={{
+        position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+        fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+        letterSpacing: '-0.2px', pointerEvents: 'none',
+      }}>
+        Sensei
+      </span>
+
+      {/* Controlli stile GNOME — cerchi neutri, close in rosso all'hover */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, WebkitAppRegion: 'no-drag' }}>
+        <GnomeButton onClick={handleMinimize} title="Minimizza">
           <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
-            <path d="M0 1h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M1 1h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
           </svg>
-        </WindowButton>
+        </GnomeButton>
 
-        {/* Massimizza / Ripristina */}
-        <WindowButton onClick={handleMaximize} title={isMaximized ? 'Ripristina' : 'Massimizza'}>
+        <GnomeButton onClick={handleMaximize} title={isMaximized ? 'Ripristina' : 'Massimizza'}>
           {isMaximized ? (
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect x="2" y="0" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M0 2v6a2 2 0 002 2h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <rect x="2.5" y="0.5" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M0.5 2.5v5a2 2 0 002 2h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           ) : (
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect x="0.6" y="0.6" width="8.8" height="8.8" rx="1.4" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="0.7" y="0.7" width="8.6" height="8.6" rx="1.6" stroke="currentColor" strokeWidth="1.4"/>
             </svg>
           )}
-        </WindowButton>
+        </GnomeButton>
 
-        {/* Chiudi */}
-        <WindowButton onClick={handleClose} title="Chiudi" danger>
+        <GnomeButton onClick={handleClose} title="Chiudi" isClose>
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
           </svg>
-        </WindowButton>
-
+        </GnomeButton>
       </div>
+
     </div>
   )
 }
 
-function WindowButton({ onClick, title, danger, children }) {
+// Bottone circolare stile GNOME Adwaita:
+// sfondo neutro all'hover, close diventa rosso per segnalare azione distruttiva.
+function GnomeButton({ onClick, title, isClose, children }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -75,14 +87,16 @@ function WindowButton({ onClick, title, danger, children }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: 28, height: 28,
-        borderRadius: 'var(--radius-sm)',
+        width: 26, height: 26,
+        borderRadius: '50%',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: hovered
+          ? isClose ? 'rgba(226,75,74,0.18)' : 'var(--bg-tertiary)'
+          : 'transparent',
         color: hovered
-          ? danger ? '#E24B4A' : 'var(--text-primary)'
+          ? isClose ? '#E24B4A' : 'var(--text-primary)'
           : 'var(--text-tertiary)',
-        background: hovered ? 'var(--bg-tertiary)' : 'transparent',
-        transition: 'all 0.15s',
+        transition: 'background 0.12s, color 0.12s',
       }}
     >
       {children}

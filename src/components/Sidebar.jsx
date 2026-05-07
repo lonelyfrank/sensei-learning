@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import NavItem from './NavItem.jsx'
 import { ICONS, GridIcon, PlusIcon, LibraryIcon, CreateIcon, SettingsIcon, ProgressIcon, HelpIcon } from './icons.jsx'
-import SenseiLogo from '../assets/sensei-logo.svg?react'
 
 // ── Costanti effetto bulge ──
 const BULGE_RADIUS = 18
@@ -186,68 +185,49 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
         flexShrink: 0,
       }}>
 
-        {/* ── TOP: Logo Sensei ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'flex-start',
-          padding: '12px 7px',
-          borderBottom: '0.5px solid var(--border)', flexShrink: 0,
-          gap: 8,
-        }}>
-          <SenseiLogo style={{ width: 38, height: 38, color: 'var(--logo-color)', flexShrink: 0 }} />
-          <span style={{
-            fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.3px',
-            opacity: collapsed ? 0 : 1,
-            maxWidth: contentCollapsed ? 0 : 120,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            transition: 'opacity 0.1s ease, max-width 0.22s ease',
-          }}>
-            Sensei
-          </span>
-        </div>
-
         {/* ── NAV PRINCIPALE ── */}
-        <div style={{ padding: collapsed ? '12px 0' : '12px 8px 8px', flexShrink: 0, transition: 'padding 0.2s ease' }}>
+        <div style={{ padding: '12px 8px 8px', flexShrink: 0 }}>
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<GridIcon />} label="I miei sentieri" active={currentView === 'home'} onClick={() => onNavigate('home')} />
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<PlusIcon />} label="Importa" onClick={onImport} />
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
         </div>
 
-        {/* ── IN CORSO — opacity immediata, maxHeight ritardata ── */}
+        {/* ── IN CORSO — grid trick: 0fr→1fr è la sola animazione height→auto fluida in CSS ── */}
         <div style={{
-          overflow: 'hidden',
-          maxHeight: contentCollapsed ? 0 : 400,
+          display: 'grid',
+          gridTemplateRows: contentCollapsed ? '0fr' : '1fr',
           opacity: collapsed ? 0 : 1,
-          transition: 'max-height 0.22s ease, opacity 0.1s ease',
+          transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
           flexShrink: 0,
         }}>
-          <div style={{ padding: '8px 16px 6px' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In corso</span>
-          </div>
-          <div style={{ padding: '0 8px' }}>
-            {activeSentieri.length === 0 && (
-              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
-            )}
-            {activeSentieri.map(course => (
-              <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} />
-            ))}
-          </div>
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '8px 16px 6px' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In corso</span>
+            </div>
+            <div style={{ padding: '0 8px' }}>
+              {activeSentieri.length === 0 && (
+                <p style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '6px 10px' }}>Nessun sentiero attivo</p>
+              )}
+              {activeSentieri.map(course => (
+                <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} />
+              ))}
+            </div>
 
-          {/* ── LEAFLET ATTIVI ── */}
-          {activeLeaflet.length > 0 && (
-            <>
-              <div style={{ padding: '8px 16px 6px' }}>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaflet</span>
-              </div>
-              <div style={{ padding: '0 8px' }}>
-                {activeLeaflet.map(course => (
-                  <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} showProgress={false} />
-                ))}
-              </div>
-            </>
-          )}
+            {/* ── LEAFLET ATTIVI ── */}
+            {activeLeaflet.length > 0 && (
+              <>
+                <div style={{ padding: '8px 16px 6px' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaflet</span>
+                </div>
+                <div style={{ padding: '0 8px' }}>
+                  {activeLeaflet.map(course => (
+                    <ArtifactRow key={course.id} course={course} onNavigate={onNavigate} showProgress={false} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Spacer scrollabile */}
