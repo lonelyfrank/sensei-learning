@@ -49,16 +49,11 @@ function NavItem({ icon, label, active, onClick, disabled, badge, collapsed, lab
           {label}
         </span>
 
-        {badge && (
+        {badge && !hideLabel && (
           <span style={{
             marginLeft: 'auto', fontSize: 10, flexShrink: 0,
             color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)',
             padding: '1px 6px', borderRadius: 10,
-            opacity: hideLabel ? 0 : 1,
-            maxWidth: hideLabel ? 0 : 60,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            transition: 'opacity 0.1s ease, max-width 0.22s ease',
           }}>{badge}</span>
         )}
       </div>

@@ -146,6 +146,7 @@ function App() {
               courses={courses}
               onSelectCourse={(course) => handleNavigate('course', course)}
               onImport={handleImport}
+              onCreate={() => handleNavigate('create')}
               onRemove={handleRemove}
               justCompleted={justCompleted}
             />

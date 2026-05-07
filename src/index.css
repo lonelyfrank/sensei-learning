@@ -365,6 +365,60 @@ button {
   to   { opacity: 1; transform: translateY(-100%) translateX(0); }
 }
 
+/* Orbita ellittica pura — derivata continua, nessun jerk al loop */
+@keyframes senseiTravel {
+  0%   { transform: translate(  0px,   0px) rotate( 0.0deg); }
+  12%  { transform: translate(  9px,  -6px) rotate( 1.8deg); }
+  25%  { transform: translate( 12px, -14px) rotate( 2.5deg); }
+  37%  { transform: translate(  9px, -22px) rotate( 1.8deg); }
+  50%  { transform: translate(  0px, -28px) rotate( 0.0deg); }
+  62%  { transform: translate( -9px, -22px) rotate(-1.8deg); }
+  75%  { transform: translate(-12px, -14px) rotate(-2.5deg); }
+  87%  { transform: translate( -9px,  -6px) rotate(-1.8deg); }
+  100% { transform: translate(  0px,   0px) rotate( 0.0deg); }
+}
+
+/* Respiro sinusoidale — anche questo lineare per loop pulito */
+@keyframes senseiGlow {
+  0%   { opacity: 0.14; }
+  25%  { opacity: 0.27; }
+  50%  { opacity: 0.18; }
+  75%  { opacity: 0.27; }
+  100% { opacity: 0.14; }
+}
+
+/* Stella che trema irregolarmente — multi-flicker */
+@keyframes twinkle {
+  0%   { opacity: 0;    transform: scale(0.2);  }
+  12%  { opacity: 0.80; transform: scale(1.12); }
+  28%  { opacity: 0.38; transform: scale(0.82); }
+  50%  { opacity: 0.90; transform: scale(1.05); }
+  68%  { opacity: 0.30; transform: scale(0.78); }
+  84%  { opacity: 0.62; transform: scale(0.95); }
+  100% { opacity: 0;    transform: scale(0.2);  }
+}
+
+@keyframes senseiWink {
+  0%, 88%, 100% { transform: scaleY(1); }
+  93%           { transform: scaleY(0.05); }
+}
+.sensei-blink .sensei-eye {
+  animation: senseiWink 3.5s ease-in-out infinite;
+}
+.sensei-blink .sensei-eye + .sensei-eye {
+  animation-delay: 0.06s;
+}
+
+/* Drift: appare rapidamente (15%), rimane visibile, svanisce lentamente */
+@keyframes driftN  { 0%{opacity:0;transform:translateY(  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translateY(-46px) scale(0.85)} }
+@keyframes driftNE { 0%{opacity:0;transform:translate( 0px,  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translate( 38px,-38px) scale(0.85)} }
+@keyframes driftE  { 0%{opacity:0;transform:translateX(  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translateX( 46px) scale(0.85)} }
+@keyframes driftSE { 0%{opacity:0;transform:translate( 0px,  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translate( 38px, 38px) scale(0.85)} }
+@keyframes driftS  { 0%{opacity:0;transform:translateY(  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translateY( 46px) scale(0.85)} }
+@keyframes driftSW { 0%{opacity:0;transform:translate( 0px,  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translate(-38px, 38px) scale(0.85)} }
+@keyframes driftW  { 0%{opacity:0;transform:translateX(  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translateX(-46px) scale(0.85)} }
+@keyframes driftNW { 0%{opacity:0;transform:translate( 0px,  0px) scale(0.35)} 15%{opacity:0.58} 80%{opacity:0.28} 100%{opacity:0;transform:translate(-38px,-38px) scale(0.85)} }
+
 @keyframes completeFlash {
   0%   { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0); }
   30%  { box-shadow: 0 0 0 6px rgba(29, 158, 117, 0.4); }
