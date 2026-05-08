@@ -260,8 +260,8 @@
   --logo-color: #ECF39E;
 }
 
-/* Artic — glaciale chiaro */
-.theme-artic {
+/* Arctic — glaciale chiaro */
+.theme-arctic {
   --bg-primary: #CAF0F8;
   --bg-secondary: #ADE8F4;
   --bg-tertiary: #90E0EF;
@@ -293,7 +293,7 @@
 }
 
 /* Cherry — fioritura di ciliegio */
-.theme-chery {
+.theme-cherry {
   --bg-primary: #FAE0E4;
   --bg-secondary: #F7CAD0;
   --bg-tertiary: #FF99AC;
@@ -423,6 +423,17 @@ button {
   0%   { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0); }
   30%  { box-shadow: 0 0 0 6px rgba(29, 158, 117, 0.4); }
   100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0); }
+}
+
+@keyframes avatarBounceIn {
+  0%   { transform: translateY(-14px) scaleX(0.92) scaleY(1.08); }
+  25%  { transform: translateY(7px)   scaleX(1.20) scaleY(0.80); }
+  42%  { transform: translateY(-7px)  scaleX(0.90) scaleY(1.10); }
+  57%  { transform: translateY(3px)   scaleX(1.10) scaleY(0.92); }
+  70%  { transform: translateY(-2px)  scaleX(0.96) scaleY(1.04); }
+  83%  { transform: translateY(1px)   scaleX(1.03) scaleY(0.98); }
+  92%  { transform: translateY(-1px)  scaleX(0.99) scaleY(1.01); }
+  100% { transform: translateY(0)     scaleX(1)    scaleY(1); }
 }
 
 /* Scrollbar sottile */

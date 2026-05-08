@@ -130,8 +130,8 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
   const activeLeaflet = courses.filter(c => c.type === 'leaflet' && c.progress > 0)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [menuY, setMenuY] = useState(0)
-  const expandedMenuRef = useRef(null)   // profilo espanso
-  const collapsedMenuRef = useRef(null)  // profilo collassato — usato per menuY
+  const [bounceKey, setBounceKey] = useState(0)
+  const profileRef = useRef(null)
   const timerRef = useRef(null)
 
   // contentCollapsed guida la visibilità dei contenuti con il timing corretto:
@@ -142,7 +142,10 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
   useEffect(() => {
     clearTimeout(timerRef.current)
     if (collapsed) {
-      timerRef.current = setTimeout(() => setContentCollapsed(true), 210)
+      timerRef.current = setTimeout(() => {
+        setContentCollapsed(true)
+        setBounceKey(k => k + 1)
+      }, 210)
     } else {
       setContentCollapsed(false)
     }
@@ -161,12 +164,9 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
     .slice(0, 2)
 
   const handleMenuToggle = () => {
-    if (!profileMenuOpen) {
-      const ref = contentCollapsed ? collapsedMenuRef : expandedMenuRef
-      if (ref.current) {
-        const rect = ref.current.getBoundingClientRect()
-        setMenuY(rect.top)
-      }
+    if (!profileMenuOpen && profileRef.current) {
+      const rect = profileRef.current.getBoundingClientRect()
+      setMenuY(rect.top)
     }
     setProfileMenuOpen(o => !o)
   }
@@ -234,7 +234,7 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
         <div style={{ flex: 1, overflowY: 'auto' }} />
 
         {/* ── BOTTOM: Profilo + menu ── */}
-        <div style={{ borderTop: '0.5px solid var(--border)', padding: '6px 8px', flexShrink: 0, position: 'relative' }}>
+        <div style={{ padding: '6px 8px', flexShrink: 0, position: 'relative' }}>
 
           {/* ── Menu espanso — sempre renderizzato, scorre da sotto ── */}
           <div style={{
@@ -270,60 +270,51 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
             </div>
           )}
 
-          {/* ── Sezione profilo: crossfade grid tra espanso e collassato ── */}
-
-          {/* Profilo espanso */}
-          <div style={{
-            display: 'grid',
-            gridTemplateRows: contentCollapsed ? '0fr' : '1fr',
-            opacity: contentCollapsed ? 0 : 1,
-            pointerEvents: contentCollapsed ? 'none' : 'auto',
-            transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
-          }}>
-            <div style={{ overflow: 'hidden' }}>
-              <div
-                ref={expandedMenuRef}
-                onClick={handleMenuToggle}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: profileMenuOpen ? 'var(--bg-tertiary)' : 'transparent' }}
-                onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
-                onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent' }}
-              >
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)' }}>
-                  {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Utente'}</p>
-                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                    {activeSentieri.length} sentier{activeSentieri.length === 1 ? 'o' : 'i'} attiv{activeSentieri.length === 1 ? 'o' : 'i'}
-                    {activeLeaflet.length > 0 && ` · ${activeLeaflet.length} leaflet`}
-                  </p>
-                </div>
-              </div>
+          {/* ── Sezione profilo — layout unico con fade testo e bounce avatar ── */}
+          <div
+            ref={profileRef}
+            onClick={handleMenuToggle}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              height: 42,
+              paddingLeft: 2,
+              paddingRight: 8,
+              borderRadius: 'var(--radius-md)', cursor: 'pointer',
+              background: profileMenuOpen ? 'var(--bg-tertiary)' : 'transparent',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'var(--bg-tertiary)' }}
+            onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent' }}
+          >
+            {/* key=bounceKey forza rimontaggio → riavvia l'animazione ad ogni collapse */}
+            <div
+              key={bounceKey}
+              style={{
+                flexShrink: 0,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 500, color: '#534AB7',
+                overflow: 'hidden', border: '0.5px solid var(--border)',
+                animation: bounceKey > 0 ? 'avatarBounceIn 0.6s linear forwards' : 'none',
+              }}
+            >
+              {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
             </div>
-          </div>
 
-          {/* Profilo collassato — solo avatar */}
-          <div style={{
-            display: 'grid',
-            gridTemplateRows: contentCollapsed ? '1fr' : '0fr',
-            opacity: contentCollapsed ? 1 : 0,
-            pointerEvents: contentCollapsed ? 'auto' : 'none',
-            transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
-          }}>
-            <div style={{ overflow: 'hidden' }}>
-              <div
-                ref={collapsedMenuRef}
-                onClick={handleMenuToggle}
-                style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}
-              >
-                <div
-                  style={{ width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#534AB7', overflow: 'hidden', border: '0.5px solid var(--border)', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                  {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-                </div>
-              </div>
+            {/* Testo — sparisce come i label NavItem usando collapsed (immediato) */}
+            <div style={{
+              flex: 1, overflow: 'hidden', minWidth: 0,
+              opacity: collapsed ? 0 : 1,
+              maxWidth: collapsed ? 0 : 200,
+              transition: 'opacity 0.1s ease, max-width 0.22s ease',
+            }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name || 'Utente'}
+              </p>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                {activeSentieri.length} sentier{activeSentieri.length === 1 ? 'o' : 'i'} attiv{activeSentieri.length === 1 ? 'o' : 'i'}
+                {activeLeaflet.length > 0 && ` · ${activeLeaflet.length} leaflet`}
+              </p>
             </div>
           </div>
 
