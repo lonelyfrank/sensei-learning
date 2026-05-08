@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import { evaluateBadges } from './badges.js'
 
 function BadgesSection({ stats }) {
@@ -29,9 +29,9 @@ function BadgesSection({ stats }) {
 }
 
 function BadgeCard({ badge, unlocked }) {
-  const [hovered, setHovered] = React.useState(false)
-  const ref = React.useRef(null)
-  const [tooltipLeft, setTooltipLeft] = React.useState(0)
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef(null)
+  const [tooltipLeft, setTooltipLeft] = useState(0)
 
   const handleMouseEnter = () => {
     if (ref.current) {

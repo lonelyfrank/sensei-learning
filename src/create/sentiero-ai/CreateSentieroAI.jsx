@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import SentieroAIForm from './SentieroAIForm.jsx'
 import SentieroAIOutput from './SentieroAIOutput.jsx'
-import { SENTIERO_PROMPT_BASE } from './sentieroPrompt.js'
 
 /* Pagina Crea Sentiero con AI — genera un prompt ottimizzato per Claude */
 function CreateSentieroAI({ onBack }) {
@@ -68,7 +67,6 @@ function CreateSentieroAI({ onBack }) {
       {/* ── STEP 2: Output ── */}
       {step === 'output' && (
         <SentieroAIOutput
-          promptBase={SENTIERO_PROMPT_BASE}
           userSection={userSection}
           setUserSection={setUserSection}
           onBack={() => setStep('info')}

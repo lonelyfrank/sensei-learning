@@ -23,9 +23,9 @@ export const THEMES_CUSTOM = [
   { id: 'rose',     label: 'Rose',     preview: ['#fff5f7', '#ffe4e8', '#1a0a0e'] },
   { id: 'graphite', label: 'Graphite', preview: ['#1c1c1e', '#2c2c2e', '#e5e5ea'] },
   { id: 'avocado', label: 'Avocado', preview: ['#132A13', '#31572C', '#ECF39E'] },
-  { id: 'artic', label: 'Artic', preview: ['#CAF0F8', '#ADE8F4', '#023E8A'] },
-  { id: 'aqua', label: 'Aqua', preview: ['#C4FFF9', '#9CEAEF', '#023E8A'] },
-  { id: 'chery', label: 'Chery', preview: ['#FAE0E4', '#F7CAD0', '#FF0A54'] },
+  { id: 'arctic', label: 'Arctic', preview: ['#CAF0F8', '#ADE8F4', '#023E8A'] },
+  { id: 'aqua',   label: 'Aqua',   preview: ['#C4FFF9', '#9CEAEF', '#023E8A'] },
+  { id: 'cherry', label: 'Cherry', preview: ['#FAE0E4', '#F7CAD0', '#FF0A54'] },
   { id: 'grass', label: 'Grass', preview: ['#AAD576', '#73A942', '#143601'] },
   { id: 'pine', label: 'Pine', preview: ['#333D29', '#414833', '#C2C5AA'] },
 ]

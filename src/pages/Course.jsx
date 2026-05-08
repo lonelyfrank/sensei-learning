@@ -10,6 +10,132 @@ import React, { useEffect, useState, useRef } from 'react'
 // che usano Map nativo. La soluzione è rinominare l'icona in "_MapIcon".
 const JS_BUILTINS = ['Map', 'Set', 'Array', 'Object', 'Error', 'Event', 'URL', 'Image']
 
+// ── Trasformazione codice ─────────────────────────────────────────────────────
+// Funzione pura: non dipende dallo stato del componente, vive a livello di modulo
+// per evitare ricreazioni ad ogni render.
+//
+// Flusso in 5 step:
+//   1. Rimuove le variabili Sensei esportate (usate solo in fase di importazione)
+//   2. Elimina tutti gli import React/react-dom (già globali nell'iframe)
+//   3. Converte gli import Lucide in assegnazioni const dal bundle UMD (_lucide)
+//      I JS_BUILTINS vengono rinominati con suffisso "Icon" per non sovrascrire nativi
+//   4. Rimuove tutti gli altri import (librerie esterne non supportate nell'iframe)
+//   5. Converte "export default" in "const __MainComponent" per il mounting manuale
+function transformCode(code) {
+  const builtinsUsedAsIcons = new Set()
+
+  let transformed = code
+    .replace(/^export\s+const\s+SENSEI_TYPE\s*=.*$/gm,  '// SENSEI_TYPE removed')
+    .replace(/^export\s+const\s+SENSEI_STEPS\s*=.*$/gm, '// SENSEI_STEPS removed')
+    .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
+    .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
+      imports.split(',').map(i => {
+        const name = i.trim().split(' as ').pop().trim()
+        return `// ${name} already global`
+      }).join('\n')
+    )
+    .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
+    .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
+      imports.split(',').map(i => {
+        const parts    = i.trim().split(' as ')
+        const original = parts[0].trim()
+        const alias    = parts[parts.length - 1].trim()
+        if (JS_BUILTINS.includes(alias)) {
+          builtinsUsedAsIcons.add(alias)
+          return `const _${alias}Icon = _lucide['${original}'] || (() => null)`
+        }
+        return `const ${alias} = _lucide['${original}'] || (() => null)`
+      }).join('\n')
+    )
+    .replace(/^import\s+.*$/gm, '// import removed')
+    .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
+
+  // Rinomina i built-in rilevati anche nei riferimenti JSX e negli oggetti
+  builtinsUsedAsIcons.forEach(name => {
+    const safe = `_${name}Icon`
+    transformed = transformed
+      .replace(new RegExp(`<${name}(\\s|/|>)`, 'g'),    `<${safe}$1`)
+      .replace(new RegExp(`</${name}>`, 'g'),             `</${safe}>`)
+      .replace(new RegExp(`:\\s*${name}([,}\\s\\n])`, 'g'), `: ${safe}$1`)
+      .replace(new RegExp(`=\\{${name}\\}`, 'g'),         `={${safe}}`)
+  })
+
+  return transformed
+}
+
+// ── Generazione HTML iframe ───────────────────────────────────────────────────
+// Architettura: Tailwind + React 18 + Lucide bundle locale + Babel standalone.
+// window.storage: bridge postMessage verso il main process (storage asincrono).
+// __nativeMap/__nativeSet: preserva i built-in JS prima che Lucide li sovrascriva.
+function generateHTML(code, lucide) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  </style>
+  <script>
+    const __nativeMap = window.Map
+    const __nativeSet = window.Set
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script>
+    window.React = React
+    window.react = React
+    const {
+      useState, useEffect, useRef, useMemo, useCallback,
+      useContext, useReducer, useLayoutEffect, forwardRef,
+      createContext, memo, Fragment
+    } = React
+  </script>
+  <script>${lucide || ''}</script>
+  <script>
+    window._lucideReact = window.LucideReact || {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script>
+    // Bridge storage: ogni chiamata window.storage.X() diventa un postMessage verso
+    // il parent (Electron) e aspetta risposta abbinandola tramite id incrementale.
+    let msgId = 0
+    const pending = {}
+    window.addEventListener('message', (e) => {
+      const { id, result } = e.data || {}
+      if (id && pending[id]) { pending[id](result); delete pending[id] }
+    })
+    function storageCall(type, data) {
+      return new Promise((resolve) => {
+        const id = ++msgId
+        pending[id] = resolve
+        window.parent.postMessage({ type: 'sensei-storage-' + type, id, ...data }, '*')
+      })
+    }
+    window.storage = {
+      get:    (key)         => storageCall('get',    { key }),
+      set:    (key, value)  => storageCall('set',    { key, value }),
+      delete: (key)         => storageCall('delete', { key }),
+      list:   (prefix)      => storageCall('list',   { prefix }),
+    }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+    window.Map = __nativeMap
+    window.Set = __nativeSet
+    const _lucide = window._lucideReact || {}
+    ${transformCode(code)}
+    const root = ReactDOM.createRoot(document.getElementById('root'))
+    root.render(React.createElement(__MainComponent))
+  </script>
+</body>
+</html>`
+}
+
 function Course({ course, onBack, onProgressUpdate, onComplete }) {
   const [courseCode, setCourseCode]   = useState(null)
   const [lucideBundle, setLucideBundle] = useState(null)
@@ -124,73 +250,6 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
     }
   }
 
-  // Trasforma il codice JSX dell'artifact per renderlo compatibile con l'iframe Babel.
-  //
-  // Il flusso di trasformazione è:
-  //   1. Rimuove le variabili Sensei esportate (SENSEI_TYPE, SENSEI_STEPS) — usate
-  //      solo in fase di importazione, non a runtime.
-  //   2. Elimina tutti gli import React/react-dom — sono già globali nell'iframe.
-  //   3. Converte gli import Lucide in assegnazioni const dal bundle UMD (_lucide).
-  //      Gestisce il caso speciale dei JS_BUILTINS rinominandoli con il suffisso "Icon"
-  //      e sostituendo anche le occorrenze JSX nel codice.
-  //   4. Rimuove tutti gli altri import (librerie esterne non supportate nell'iframe).
-  //   5. Converte "export default" in "const __MainComponent" per permettere
-  //      il mounting manuale via ReactDOM.createRoot.
-  const transformCode = (code) => {
-    const builtinsUsedAsIcons = new Set()
-
-    let transformed = code
-      // Step 1 — variabili Sensei: usate solo all'importazione, non a runtime
-      .replace(/^export\s+const\s+SENSEI_TYPE\s*=.*$/gm,  '// SENSEI_TYPE removed')
-      .replace(/^export\s+const\s+SENSEI_STEPS\s*=.*$/gm, '// SENSEI_STEPS removed')
-
-      // Step 2 — React globale: già iniettato nell'iframe via CDN
-      .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
-      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
-        imports.split(',').map(i => {
-          const name = i.trim().split(' as ').pop().trim()
-          return `// ${name} already global`
-        }).join('\n')
-      )
-      .replace(/import\s+.*?from\s+['"]react-dom['"]/g, '// react-dom global')
-
-      // Step 3 — Lucide: mappa ogni import al corrispondente nell'UMD bundle
-      .replace(/import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/g, (_, imports) =>
-        imports.split(',').map(i => {
-          const parts    = i.trim().split(' as ')
-          const original = parts[0].trim()
-          const alias    = parts[parts.length - 1].trim()
-
-          // Se il nome dell'icona è un built-in JS (es. Map, Set) la rinomina
-          // in _MapIcon per non sovrascrivere il built-in nativo nell'iframe
-          if (JS_BUILTINS.includes(alias)) {
-            builtinsUsedAsIcons.add(alias)
-            return `const _${alias}Icon = _lucide['${original}'] || (() => null)`
-          }
-          return `const ${alias} = _lucide['${original}'] || (() => null)`
-        }).join('\n')
-      )
-
-      // Step 4 — tutti gli altri import: non supportati nell'iframe sandboxato
-      .replace(/^import\s+.*$/gm, '// import removed')
-
-      // Step 5 — export default: diventa una const per il mounting manuale
-      .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
-
-    // Sostituisce i riferimenti JSX e object ai built-in rinominati.
-    // Es: <Map ... /> → <_MapIcon ... />, { icon: Map } → { icon: _MapIcon }
-    builtinsUsedAsIcons.forEach(name => {
-      const safe = `_${name}Icon`
-      transformed = transformed
-        .replace(new RegExp(`<${name}(\\s|/|>)`, 'g'),   `<${safe}$1`)
-        .replace(new RegExp(`</${name}>`, 'g'),            `</${safe}>`)
-        .replace(new RegExp(`:\\s*${name}([,}\\s\\n])`, 'g'), `: ${safe}$1`)
-        .replace(new RegExp(`=\\{${name}\\}`, 'g'),        `={${safe}}`)
-    })
-
-    return transformed
-  }
-
   // L'iframe intercetta i mousemove al suo interno (frame separato).
   // Questo overlay sul bordo sinistro propaga gli eventi al window principale
   // così la bulge della sidebar risponde anche quando il cursore è sull'iframe.
@@ -199,86 +258,6 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
       clientX: e.clientX, clientY: e.clientY, bubbles: true,
     }))
   }
-
-  // Genera il documento HTML completo da iniettare nell'iframe.
-  // Architettura dell'iframe:
-  //   - Tailwind CSS (CDN) + React 18 (CDN) + Lucide bundle (locale via IPC)
-  //   - window.storage: ponte di comunicazione postMessage verso il main process
-  //   - Babel standalone: transpila il codice JSX a runtime
-  //   - __nativeMap/__nativeSet: preserva i built-in JS prima che Lucide li sovrascriva
-  const generateHTML = (code, lucide) => `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  </style>
-  <script>
-    // Salva i built-in prima del caricamento di Lucide (che potrebbe sovrascriverli)
-    const __nativeMap = window.Map
-    const __nativeSet = window.Set
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script>
-    // Espone React e i suoi hook come globali — gli artifact li usano direttamente
-    window.React = React
-    window.react = React
-    const {
-      useState, useEffect, useRef, useMemo, useCallback,
-      useContext, useReducer, useLayoutEffect, forwardRef,
-      createContext, memo, Fragment
-    } = React
-  </script>
-  <script>${lucide || ''}</script>
-  <script>
-    // Il bundle Lucide UMD si espone come window.LucideReact
-    window._lucideReact = window.LucideReact || {}
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-  <script>
-    // ── Bridge storage postMessage ─────────────────────────────────────────
-    // Ogni chiamata window.storage.X() invia un postMessage al parent (Electron)
-    // e aspetta la risposta abbinandola tramite un id numerico incrementale.
-    // Questo pattern permette di usare storage asincrono come se fosse sincrono
-    // con le stesse API che Claude genera negli artifact.
-    let msgId = 0
-    const pending = {}
-    window.addEventListener('message', (e) => {
-      const { id, result } = e.data || {}
-      if (id && pending[id]) { pending[id](result); delete pending[id] }
-    })
-    function storageCall(type, data) {
-      return new Promise((resolve) => {
-        const id = ++msgId
-        pending[id] = resolve
-        window.parent.postMessage({ type: 'sensei-storage-' + type, id, ...data }, '*')
-      })
-    }
-    window.storage = {
-      get:    (key)         => storageCall('get',    { key }),
-      set:    (key, value)  => storageCall('set',    { key, value }),
-      delete: (key)         => storageCall('delete', { key }),
-      list:   (prefix)      => storageCall('list',   { prefix }),
-    }
-  </script>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel" data-presets="react">
-    // Ripristina i built-in JS dopo il caricamento di Lucide
-    window.Map = __nativeMap
-    window.Set = __nativeSet
-    const _lucide = window._lucideReact || {}
-    ${transformCode(code)}
-    const root = ReactDOM.createRoot(document.getElementById('root'))
-    root.render(React.createElement(__MainComponent))
-  </script>
-</body>
-</html>`
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

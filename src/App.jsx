@@ -255,8 +255,7 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
   const [icon,  setIcon]  = useState(defaultIcon)
   const [color, setColor] = useState(defaultColor)
 
-  // Chiusura via tastiera — coerente con ConfirmDeleteDialog
-  React.useEffect(() => {
+  useEffect(() => {
     const handle = (e) => { if (e.key === 'Escape') onCancel() }
     window.addEventListener('keydown', handle)
     return () => window.removeEventListener('keydown', handle)
@@ -366,7 +365,7 @@ function ConfirmDeleteDialog({ course, onConfirm, onCancel }) {
   const isLeaflet = course.type === 'leaflet'
   const tipo      = isLeaflet ? 'leaflet' : 'sentiero'
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handle = (e) => { if (e.key === 'Escape') onCancel() }
     window.addEventListener('keydown', handle)
     return () => window.removeEventListener('keydown', handle)

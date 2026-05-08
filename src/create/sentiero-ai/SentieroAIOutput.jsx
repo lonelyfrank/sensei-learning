@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
+import { SENTIERO_PROMPT_BASE } from './sentieroPrompt.js'
 
-function SentieroAIOutput({ promptBase, userSection, setUserSection, onBack }) {
+function SentieroAIOutput({ userSection, setUserSection, onBack }) {
   const [copied, setCopied] = useState(false)
 
-  const fullPrompt = `${promptBase}\n\n${userSection}`
+  const fullPrompt = `${SENTIERO_PROMPT_BASE}\n\n${userSection}`
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullPrompt)
@@ -39,7 +40,7 @@ function SentieroAIOutput({ promptBase, userSection, setUserSection, onBack }) {
           maxHeight: 180, overflowY: 'auto',
           whiteSpace: 'pre-wrap', opacity: 0.7,
         }}>
-          {promptBase}
+          {SENTIERO_PROMPT_BASE}
         </div>
       </div>
 

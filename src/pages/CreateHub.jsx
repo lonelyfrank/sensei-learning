@@ -1,7 +1,7 @@
 // ─── CreateHub.jsx ───────────────────────────────────────────────────────────
 // Landing page della sezione Crea — mostra le modalità disponibili e future
 
-import React from 'react'
+import React, { useState } from 'react'
 
 // Modalità di creazione attualmente disponibili
 const MODES_AVAILABLE = [
@@ -102,7 +102,7 @@ function CreateHub({ onBack, onSelectMode }) {
 
 // Card singola modalità — cliccabile o disabilitata (soon)
 function ModeCard({ mode, onClick, soon }) {
-  const [hovered, setHovered] = React.useState(false)
+  const [hovered, setHovered] = useState(false)
 
   return (
     <div

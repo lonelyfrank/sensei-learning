@@ -1,31 +1,31 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { ICONS } from '../components/icons.jsx'
 import { CourseIconFallback, CheckIcon, TrashIcon } from './homeIcons.jsx'
+
+// Estratto a livello di modulo: come componente inline causa smontaggio/rimontaggio ad ogni render del parent.
+function CourseIcon({ course, view, isCompleted }) {
+  if (isCompleted) return <CheckIcon color="#1D9E75" />
+  if (course.icon && ICONS[course.icon]) {
+    const Icon = ICONS[course.icon]
+    return <Icon size={view === 'list' ? 14 : 18} color={course.color} />
+  }
+  return <CourseIconFallback color={course.color} />
+}
 
 /* Card singola artifact — griglia o lista */
 function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, showTypeBadge, justCompleted }) {
   const [hovered, setHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = React.useRef(null)
+  const menuRef = useRef(null)
 
-  // Animazione flash verde quando il sentiero viene appena completato
   const isJustCompleted = justCompleted === course.id
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!menuOpen) return
     const handle = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
     document.addEventListener('mousedown', handle)
     return () => document.removeEventListener('mousedown', handle)
   }, [menuOpen])
-
-  const CourseIconEl = () => {
-    if (isCompleted) return <CheckIcon color="#1D9E75" />
-    if (course.icon && ICONS[course.icon]) {
-      const Icon = ICONS[course.icon]
-      return <Icon size={view === 'list' ? 14 : 18} color={course.color} />
-    }
-    return <CourseIconFallback color={course.color} />
-  }
 
   if (view === 'list') {
     return (
@@ -44,7 +44,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
       >
         <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: isCompleted ? '#1D9E7522' : course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <CourseIconEl />
+            <CourseIcon course={course} view={view} isCompleted={isCompleted} />
           </div>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{course.name}</span>
 
@@ -87,7 +87,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
 
       <div onClick={onClick}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: isCompleted ? '#1D9E7522' : course.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-          <CourseIconEl />
+          <CourseIcon course={course} view={view} isCompleted={isCompleted} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{course.name}</p>
