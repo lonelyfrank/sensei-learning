@@ -32,6 +32,7 @@ function Settings({ onBack, onSave }) {
             padding: '5px 10px', borderRadius: 'var(--radius-md)',
             border: '0.5px solid var(--border)',
             marginBottom: 20, width: 'fit-content',
+            userSelect: 'none',
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -58,6 +59,7 @@ function Settings({ onBack, onSave }) {
               color: section === s.id ? 'var(--text-primary)' : 'var(--text-secondary)',
               fontSize: 13, fontWeight: section === s.id ? 500 : 400,
               transition: 'background 0.15s, color 0.15s',
+              userSelect: 'none',
             }}
             onMouseEnter={e => { if (section !== s.id) e.currentTarget.style.background = 'var(--bg-secondary)' }}
             onMouseLeave={e => { if (section !== s.id) e.currentTarget.style.background = 'transparent' }}
@@ -68,7 +70,7 @@ function Settings({ onBack, onSave }) {
       </div>
 
       {/* ── CONTENUTO DESTRA ── */}
-      <div style={{ flex: 1, overflow: 'hidden', padding: '28px 32px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflow: 'hidden', padding: section === 'version' ? 0 : '28px 32px', display: 'flex', flexDirection: 'column' }}>
         {section === 'user'    && <UserSection onSave={onSave} />}
         {section === 'themes'  && <ThemesSection currentTheme={theme} onApplyTheme={applyTheme} />}
         {section === 'version' && <VersionSection />}

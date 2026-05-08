@@ -32,6 +32,8 @@
   --bg-icon: #a0a0a0;
   --icon-color: #2e2e2e;
   --logo-color: #a0a0a0;
+  --game-danger:  #FF6B35;
+  --game-collect: #38BDF8;
 }
 
 /* Light */
@@ -340,6 +342,21 @@
   --logo-color: #C2C5AA;
 }
 
+/* Colori minigioco — danger (nemici) e collect (bonus).
+   Override per i temi a sfondo chiaro dove i valori default hanno poco contrasto. */
+.theme-light,
+.theme-sensei-light,
+.theme-rose,
+.theme-paper,
+.theme-sakura,
+.theme-arctic,
+.theme-aqua,
+.theme-cherry,
+.theme-grass {
+  --game-danger:  #C84B0A;
+  --game-collect: #0284C7;
+}
+
 /* ── BASE ── */
 
 html, body, #root {
@@ -350,6 +367,8 @@ html, body, #root {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 button {
@@ -434,6 +453,17 @@ button {
   83%  { transform: translateY(1px)   scaleX(1.03) scaleY(0.98); }
   92%  { transform: translateY(-1px)  scaleX(0.99) scaleY(1.01); }
   100% { transform: translateY(0)     scaleX(1)    scaleY(1); }
+}
+
+@keyframes logoPulse {
+  0%   { transform: scale(1); }
+  15%  { transform: scale(1.18); }
+  30%  { transform: scale(0.92); }
+  45%  { transform: scale(1.10); }
+  60%  { transform: scale(0.96); }
+  75%  { transform: scale(1.04); }
+  88%  { transform: scale(0.99); }
+  100% { transform: scale(1); }
 }
 
 /* Scrollbar sottile */
