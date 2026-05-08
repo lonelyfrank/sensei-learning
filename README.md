@@ -84,7 +84,7 @@ The long-term goal is to make Sensei capable of interpreting and hosting any for
 - 💾 **Persistenza progressi** — storage SQLite locale, sincronizzazione automatica degli step completati
 - 🎮 **Gamification** — sistema XP, 5 livelli (Mugei → Sensei), achievement badge con kanji
 - 🎉 **Feedback completamento** — toast animato e flash sulla card al completamento di un sentiero
-- 🎨 **12 temi** — Light, Dark, Sensei, Sensei Light, Midnight, Nord, Obsidian, Ocean, Forest, Amber, Paper, Sakura, Rose, Graphite
+- 🎨 **20 temi** — Light, Dark, Sensei, Sensei Light, Midnight, Nord, Obsidian, Ocean, Forest, Amber, Paper, Sakura, Rose, Graphite, Avocado, Arctic, Aqua, Cherry, Grass, Pine
 - ✦ **Crea con AI** — generatore di prompt ottimizzati per Claude, separato per Sentieri e Leaflet
 - 🔍 **Rilevamento automatico** — tipo artifact, numero di step, struttura del contenuto
 - 🖥️ **UI nativa** — titlebar custom, sidebar con effetto bulge lerp, modalità collapsed icon-only
