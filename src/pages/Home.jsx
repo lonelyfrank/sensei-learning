@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import CourseCard from '../home/CourseCard.jsx'
 import CourseGrid from '../home/CourseGrid.jsx'
 import CollapsibleSection, { getSectionState, setSectionState } from '../home/CollapsibleSection.jsx'
@@ -91,29 +91,39 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
 
   const toggleSection = (key, val, setter) => { setter(!val); setSectionState(key, !val) }
 
-  const sentieri = courses.filter(c => c.type === 'sentiero' || !c.type)
-  const leaflets = courses.filter(c => c.type === 'leaflet')
+  // Dati derivati memoizzati — ricalcolati solo quando cambiano le dipendenze
+  const sentieri = useMemo(() => courses.filter(c => c.type === 'sentiero' || !c.type), [courses])
+  const leaflets = useMemo(() => courses.filter(c => c.type === 'leaflet'), [courses])
+
   const isSearching = search.trim().length > 0
-  const searchResults = courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-
-  const inProgress = sentieri
-    .filter(c => c.progress > 0 && c.progress < 100)
-    .sort((a, b) => b.progress - a.progress)
-
-  // Sentieri filtrati e ordinati
-  const sentieriFiltered = sortCourses(
-    sentieri.filter(c => {
-      if (sentieroFilter === 'In corso') return c.progress > 0 && c.progress < 100
-      if (sentieroFilter === 'Non iniziati') return c.progress === 0
-      return true
-    }),
-    sortBy
+  const searchResults = useMemo(
+    () => courses.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
+    [courses, search]
   )
 
-  const leafletFiltered = leaflets.filter(c => {
-    if (leafletFilter === 'Aperti') return c.progress > 0
-    return true
-  })
+  const inProgress = useMemo(
+    () => sentieri
+      .filter(c => c.progress > 0 && c.progress < 100)
+      .sort((a, b) => b.progress - a.progress),
+    [sentieri]
+  )
+
+  const sentieriFiltered = useMemo(
+    () => sortCourses(
+      sentieri.filter(c => {
+        if (sentieroFilter === 'In corso') return c.progress > 0 && c.progress < 100
+        if (sentieroFilter === 'Non iniziati') return c.progress === 0
+        return true
+      }),
+      sortBy
+    ),
+    [sentieri, sentieroFilter, sortBy]
+  )
+
+  const leafletFiltered = useMemo(
+    () => leaflets.filter(c => leafletFilter === 'Aperti' ? c.progress > 0 : true),
+    [leaflets, leafletFilter]
+  )
 
   // Empty state — bypassa header e sezioni, centra nel layout
   if (courses.length === 0) {
@@ -301,7 +311,7 @@ function ActionCard({ icon, title, description, color, onClick }) {
         border: `0.5px solid ${hovered ? color + '44' : 'var(--border)'}`,
         borderRadius: 'var(--radius-lg)',
         cursor: 'pointer',
-        transition: 'all 0.18s ease',
+        transition: 'background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease',
         boxShadow: hovered ? '0 6px 24px rgba(0,0,0,0.1)' : 'none',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
       }}

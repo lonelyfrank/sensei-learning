@@ -1,10 +1,13 @@
+// ─── xpSystem.jsx ─────────────────────────────────────────────────────────────
+// Sistema XP e livelli di Sensei.
+// 10 XP per step completato + 50 XP bonus per sentiero completato al 100%.
+// I livelli sbloccano titoli progressivi in stile arti marziali giapponesi.
+
 import MugeiIcon from './icons/mugei.svg?react'
 import KohaiIcon from './icons/kohai.svg?react'
 import SenpaiIcon from './icons/senpai.svg?react'
 import ShinanIcon from './icons/shihan.svg?react'
 import SenseiIcon from './icons/sensei.svg?react'
-// Sistema XP e livelli di Sensei
-// Ogni step completato dà XP, i livelli sbloccano titoli in stile arti marziali
 
 export const LEVELS = [
   { name: 'Mugei',  kanji: '無芸', min: 0,    max: 99,       color: '#a0a0a0', desc: 'Nessuna arte — il viaggio inizia',      Icon: MugeiIcon  },

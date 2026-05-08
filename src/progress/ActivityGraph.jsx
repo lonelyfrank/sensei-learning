@@ -1,67 +1,54 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 
 const DAYS = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 const MONTHS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
+
+// Funzioni pure a livello di modulo — non ricreate ad ogni render
+// Raggruppa i giorni in settimane, aggiungendo celle null per allineare il primo giorno
+function buildGrid(activity) {
+  if (!activity.length) return []
+  const firstDate = new Date(activity[0].date)
+  // JS: 0=dom → convertiamo in 0=lun, 6=dom per allineamento settimanale europeo
+  const firstDow = (firstDate.getDay() + 6) % 7
+  const padded = [...Array(firstDow).fill(null), ...activity]
+  const weeks = []
+  for (let i = 0; i < padded.length; i += 7) weeks.push(padded.slice(i, i + 7))
+  return weeks
+}
+
+// Determina il label del mese da mostrare sopra ogni colonna (solo al cambio mese)
+function buildMonthLabels(weeks) {
+  const labels = []
+  let lastMonth = -1
+  for (const week of weeks) {
+    const firstReal = week.find(d => d !== null)
+    if (firstReal) {
+      const month = new Date(firstReal.date).getMonth()
+      labels.push(month !== lastMonth ? { label: MONTHS[month] } : null)
+      lastMonth = month
+    } else {
+      labels.push(null)
+    }
+  }
+  return labels
+}
+
+// Colore cella in base al numero di step — 5 livelli di intensità
+function cellColor(day) {
+  if (!day || day.count === 0) return 'var(--bg-tertiary)'
+  if (day.count === 1) return '#378ADD33'
+  if (day.count === 2) return '#378ADD66'
+  if (day.count <= 4) return '#378ADD99'
+  return '#378ADD'
+}
 
 /* Grafico attività stile GitHub — griglia settimane × giorni */
 function ActivityGraph({ activity }) {
   const [tooltip, setTooltip] = useState(null)
 
-  // Raggruppa i giorni in settimane (colonne)
-  // Aggiunge giorni vuoti all'inizio per allineare al giorno della settimana corretto
-  const buildGrid = () => {
-    if (!activity.length) return []
-
-    const firstDate = new Date(activity[0].date)
-    // 0=dom, 1=lun... convertiamo in 0=lun, 6=dom
-    const firstDow = (firstDate.getDay() + 6) % 7
-
-    // Padding iniziale con celle vuote
-    const padded = [
-      ...Array(firstDow).fill(null),
-      ...activity,
-    ]
-
-    // Suddivide in settimane da 7
-    const weeks = []
-    for (let i = 0; i < padded.length; i += 7) {
-      weeks.push(padded.slice(i, i + 7))
-    }
-    return weeks
-  }
-
-  // Determina quale mese mostrare sopra ogni colonna
-  const getMonthLabels = (weeks) => {
-    const labels = []
-    let lastMonth = -1
-    weeks.forEach((week, wi) => {
-      const firstReal = week.find(d => d !== null)
-      if (firstReal) {
-        const month = new Date(firstReal.date).getMonth()
-        if (month !== lastMonth) {
-          labels.push({ wi, label: MONTHS[month] })
-          lastMonth = month
-        } else {
-          labels.push(null)
-        }
-      } else {
-        labels.push(null)
-      }
-    })
-    return labels
-  }
-
-  // Colore della cella in base al numero di step completati quel giorno
-  const cellColor = (day) => {
-    if (!day || day.count === 0) return 'var(--bg-tertiary)'
-    if (day.count === 1) return '#378ADD33'
-    if (day.count === 2) return '#378ADD66'
-    if (day.count <= 4) return '#378ADD99'
-    return '#378ADD'
-  }
-
-  const weeks = buildGrid()
-  const monthLabels = getMonthLabels(weeks)
+  // Memoizzati: ricalcolati solo quando cambia activity (caricamento pagina)
+  const weeks = useMemo(() => buildGrid(activity), [activity])
+  const monthLabels = useMemo(() => buildMonthLabels(weeks), [weeks])
 
   return (
     <div style={{ marginTop: 12, position: 'relative' }}>

@@ -285,6 +285,9 @@ ipcMain.handle('open-external', (event, url) => {
   shell.openExternal(url)
 })
 
+// Restituisce la versione dell'app da package.json
+ipcMain.handle('get-app-version', () => app.getVersion())
+
 // ─── CONTROLLI FINESTRA CUSTOM ───────────────────────────────────────────────
 
 // Minimizza la finestra

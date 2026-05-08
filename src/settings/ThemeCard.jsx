@@ -12,7 +12,7 @@ function ThemeCard({ theme: t, isActive, onApply }) {
       style={{
         borderRadius: 'var(--radius-lg)',
         border: `1.5px solid ${isActive ? '#378ADD' : hovered ? 'var(--border-hover)' : 'var(--border)'}`,
-        cursor: 'pointer', transition: 'all 0.2s',
+        cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s',
         overflow: 'hidden', position: 'relative',
         boxShadow: hovered ? '0 4px 16px rgba(0,0,0,0.15)' : 'none',
       }}

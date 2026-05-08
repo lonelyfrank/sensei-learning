@@ -56,4 +56,7 @@ contextBridge.exposeInMainWorld('sensei', {
   getWelcomed: () => ipcRenderer.invoke('get-welcomed'),
   setWelcomed: () => ipcRenderer.invoke('set-welcomed'),
 
+  // Versione dell'app (da package.json via app.getVersion())
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
 })

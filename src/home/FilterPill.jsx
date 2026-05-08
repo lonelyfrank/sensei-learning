@@ -10,7 +10,7 @@ function FilterPill({ label, active, onClick }) {
         border: active ? '0.5px solid #378ADD' : '0.5px solid var(--border)',
         color: active ? '#378ADD' : 'var(--text-tertiary)',
         background: active ? '#378ADD11' : 'transparent',
-        transition: 'all 0.15s',
+        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
       }}
     >
       {label}

@@ -116,7 +116,7 @@ function ModeCard({ mode, onClick, soon }) {
         borderRadius: 'var(--radius-lg)',
         cursor: soon ? 'default' : 'pointer',
         opacity: soon ? 0.5 : 1,
-        transition: 'all 0.15s',
+        transition: 'background 0.15s, border-color 0.15s',
       }}
     >
       {/* Icona modalità */}

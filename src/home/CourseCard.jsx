@@ -76,7 +76,7 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setMenuOpen(false) }}
       style={{
-        background: isCompleted ? 'var(--bg-secondary)' : hovered ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+        background: (isCompleted || hovered) ? 'var(--bg-secondary)' : 'var(--bg-primary)',
         border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)',
         padding: 16, cursor: 'pointer', transition: 'background 0.15s',
         opacity: isCompleted ? 0.75 : 1, position: 'relative',

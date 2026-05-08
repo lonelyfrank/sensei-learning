@@ -2,10 +2,12 @@ import React, { useState } from 'react'
 import { useTheme } from '../context/ThemeContext.jsx'
 import UserSection from '../settings/UserSection.jsx'
 import ThemesSection from '../settings/ThemesSection.jsx'
+import VersionSection from '../settings/VersionSection.jsx'
 
 const SECTIONS = [
-  { id: 'user',   label: 'Profilo' },
-  { id: 'themes', label: 'Aspetto' },
+  { id: 'user',    label: 'Profilo' },
+  { id: 'themes',  label: 'Aspetto' },
+  { id: 'version', label: 'Versione' },
 ]
 
 function Settings({ onBack, onSave }) {
@@ -55,7 +57,7 @@ function Settings({ onBack, onSave }) {
               background: section === s.id ? 'var(--bg-tertiary)' : 'transparent',
               color: section === s.id ? 'var(--text-primary)' : 'var(--text-secondary)',
               fontSize: 13, fontWeight: section === s.id ? 500 : 400,
-              transition: 'all 0.15s',
+              transition: 'background 0.15s, color 0.15s',
             }}
             onMouseEnter={e => { if (section !== s.id) e.currentTarget.style.background = 'var(--bg-secondary)' }}
             onMouseLeave={e => { if (section !== s.id) e.currentTarget.style.background = 'transparent' }}
@@ -67,8 +69,9 @@ function Settings({ onBack, onSave }) {
 
       {/* ── CONTENUTO DESTRA ── */}
       <div style={{ flex: 1, overflow: 'hidden', padding: '28px 32px', display: 'flex', flexDirection: 'column' }}>
-        {section === 'user' && <UserSection onSave={onSave} />}
-        {section === 'themes' && <ThemesSection currentTheme={theme} onApplyTheme={applyTheme} />}
+        {section === 'user'    && <UserSection onSave={onSave} />}
+        {section === 'themes'  && <ThemesSection currentTheme={theme} onApplyTheme={applyTheme} />}
+        {section === 'version' && <VersionSection />}
       </div>
 
     </div>
