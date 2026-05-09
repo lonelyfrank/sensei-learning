@@ -113,27 +113,38 @@ function detectArtifactMeta(code) {
 // mkdirSync con { recursive: true } garantisce che la cartella esista anche
 // al primo avvio o in ambienti in cui non è stata creata manualmente.
 ipcMain.handle('import-course', async (event, filePath, customName, icon, color) => {
-  const filename   = path.basename(filePath)
-  const courseId   = filename.replace('.jsx', '')
-  const coursesDir = path.join(app.getAppPath(), 'courses')
-  const destPath   = path.join(coursesDir, filename)
+  try {
+    if (!fs.existsSync(filePath))
+      return { success: false, error: 'File non trovato' }
 
-  fs.mkdirSync(coursesDir, { recursive: true })
-  fs.copyFileSync(filePath, destPath)
+    if (!filePath.endsWith('.jsx'))
+      return { success: false, error: 'Il file deve avere estensione .jsx' }
 
-  const code = fs.readFileSync(filePath, 'utf-8')
+    const code = fs.readFileSync(filePath, 'utf-8')
 
-  // Rileva tipo e numero di step con il sistema a cascata
-  const { type, totalSteps } = detectArtifactMeta(code)
+    if (!code.trim())
+      return { success: false, error: 'Il file è vuoto' }
 
-  const name = customName || courseId
+    const filename   = path.basename(filePath)
+    const courseId   = filename.replace('.jsx', '')
+    const coursesDir = path.join(app.getAppPath(), 'courses')
+    const destPath   = path.join(coursesDir, filename)
 
-  db.prepare(`
-    INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(courseId, name, filename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
+    fs.mkdirSync(coursesDir, { recursive: true })
+    fs.copyFileSync(filePath, destPath)
 
-  return { success: true, courseId, totalSteps, type }
+    const { type, totalSteps } = detectArtifactMeta(code)
+    const name = customName || courseId
+
+    db.prepare(`
+      INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(courseId, name, filename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
+
+    return { success: true, courseId, totalSteps, type }
+  } catch (err) {
+    return { success: false, error: err.message || 'Errore durante l\'importazione' }
+  }
 })
 
 // Legge tutti gli artifact registrati nel database

@@ -74,8 +74,13 @@ function generateHTML(code, lucide) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
+    ::-webkit-scrollbar-corner { background: transparent; }
   </style>
   <script>
     const __nativeMap = window.Map
@@ -98,6 +103,15 @@ function generateHTML(code, lucide) {
     window._lucideReact = window.LucideReact || {}
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script>
+    window.onerror = (msg, _src, _line, _col, err) => {
+      window.parent.postMessage({ type: 'sensei-artifact-error', message: err?.message || msg }, '*')
+      return true
+    }
+    window.addEventListener('unhandledrejection', (e) => {
+      window.parent.postMessage({ type: 'sensei-artifact-error', message: e.reason?.message || 'Errore sconosciuto' }, '*')
+    })
+  </script>
   <script>
     // Bridge storage: ogni chiamata window.storage.X() diventa un postMessage verso
     // il parent (Electron) e aspetta risposta abbinandola tramite id incrementale.
@@ -152,7 +166,13 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
   useEffect(() => {
     loadCourse()
     completedNotified.current = false
-    const handleMessage = (event) => handleStorageMessage(event, course.id)
+    const handleMessage = (event) => {
+      if (event.data?.type === 'sensei-artifact-error') {
+        setError(event.data.message || 'Errore nell\'artifact')
+        return
+      }
+      handleStorageMessage(event, course.id)
+    }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [course.id])

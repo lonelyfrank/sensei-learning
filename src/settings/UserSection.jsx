@@ -25,6 +25,7 @@ function UserSection({ onSave }) {
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => setAvatar(ev.target.result)
+    reader.onerror = () => console.error('Impossibile leggere il file immagine')
     reader.readAsDataURL(file)
   }
 

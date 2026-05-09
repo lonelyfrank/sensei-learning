@@ -79,6 +79,11 @@ function Progress({ onBack, courses }) {
 
       {!stats ? (
         <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>Caricamento...</p>
+      ) : stats.totalCourses === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '80px 40px' }}>
+          <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Nessun sentiero ancora</p>
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: 0 }}>Importa il tuo primo artifact dalla schermata principale.</p>
+        </div>
       ) : (
         <>
           {/* ── LEVEL CARD — tutta la larghezza ── */}

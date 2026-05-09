@@ -13,16 +13,17 @@ export function useToast() {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // Shortcut per toast di completamento sentiero
   const toastComplete = useCallback((courseName) => {
-    addToast({
-      title: 'Sentiero completato!',
-      message: courseName,
-      icon: '🎉',
-      color: '#1D9E75',
-      duration: 4000,
-    })
+    addToast({ title: 'Sentiero completato!', message: courseName, icon: '🎉', color: '#1D9E75', duration: 4000 })
   }, [addToast])
 
-  return { toasts, addToast, removeToast, toastComplete }
+  const toastError = useCallback((title, message) => {
+    addToast({ title, message, icon: '⚠️', color: '#E24B4A', duration: 4000 })
+  }, [addToast])
+
+  const toastSuccess = useCallback((title, message) => {
+    addToast({ title, message, icon: '✓', color: '#1D9E75', duration: 3000 })
+  }, [addToast])
+
+  return { toasts, addToast, removeToast, toastComplete, toastError, toastSuccess }
 }

@@ -58,7 +58,9 @@ function App() {
   const [viewOpacity, setViewOpacity]   = useState(1)
   const viewTransitionRef               = useRef(null)
 
-  const { toasts, removeToast, toastComplete } = useToast()
+  const [importing, setImporting] = useState(false)
+
+  const { toasts, removeToast, toastComplete, toastError, toastSuccess } = useToast()
 
   useEffect(() => {
     loadCourses()
@@ -74,22 +76,27 @@ function App() {
   // Carica tutti i corsi dal DB e arricchisce ogni elemento con il progresso
   // calcolato (percentuale, giorni completati, giorni totali) e un colore di default.
   const loadCourses = async () => {
-    const result = await window.sensei.getCourses()
-    const coursesWithProgress = await Promise.all(
-      result.map(async (course, index) => {
-        const progress  = await window.sensei.getProgress(course.id)
-        const completed = progress.filter(p => p.completed).length
-        const total     = course.total_days || 1
-        return {
-          ...course,
-          color:         course.color || COURSE_COLORS[index % COURSE_COLORS.length],
-          progress:      total > 0 ? Math.round((completed / total) * 100) : 0,
-          completedDays: completed,
-          totalDays:     total,
-        }
-      })
-    )
-    setCourses(coursesWithProgress)
+    try {
+      const result = await window.sensei.getCourses()
+      if (!result) return
+      const coursesWithProgress = await Promise.all(
+        result.map(async (course, index) => {
+          const progress  = (await window.sensei.getProgress(course.id)) ?? []
+          const completed = progress.filter(p => p.completed).length
+          const total     = course.total_days || 1
+          return {
+            ...course,
+            color:         course.color || COURSE_COLORS[index % COURSE_COLORS.length],
+            progress:      total > 0 ? Math.round((completed / total) * 100) : 0,
+            completedDays: completed,
+            totalDays:     total,
+          }
+        })
+      )
+      setCourses(coursesWithProgress)
+    } catch {
+      toastError('Errore', 'Impossibile caricare gli artifact')
+    }
   }
 
   // Naviga verso una vista con fade-out/fade-in da 150ms.
@@ -127,17 +134,31 @@ function App() {
   }
 
   const handleImportConfirm = async (filePath, name, icon, color) => {
-    await window.sensei.importCourse(filePath, name, icon, color)
-    setImportDialog(null)
-    loadCourses()
+    setImporting(true)
+    try {
+      const result = await window.sensei.importCourse(filePath, name, icon, color)
+      if (!result?.success) throw new Error(result?.error || 'Errore durante l\'importazione')
+      toastSuccess('Artifact importato', name)
+      loadCourses()
+    } catch (err) {
+      toastError('Import fallito', err.message)
+    } finally {
+      setImporting(false)
+      setImportDialog(null)
+    }
   }
 
   const handleRemove = (course) => setConfirmDelete(course)
 
   const handleRemoveConfirm = async () => {
-    await window.sensei.removeCourse(confirmDelete.id, confirmDelete.filename)
-    setConfirmDelete(null)
-    loadCourses()
+    try {
+      await window.sensei.removeCourse(confirmDelete.id, confirmDelete.filename)
+      loadCourses()
+    } catch {
+      toastError('Errore', 'Impossibile eliminare l\'artifact')
+    } finally {
+      setConfirmDelete(null)
+    }
   }
 
   return (
@@ -161,6 +182,7 @@ function App() {
         />
 
         {/* Area contenuto principale — opacità animata durante le transizioni di vista */}
+        <ErrorBoundary>
         <div style={{
           flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column',
           opacity: viewOpacity, transition: 'opacity 0.15s ease',
@@ -211,6 +233,7 @@ function App() {
           )}
 
         </div>
+        </ErrorBoundary>
       </div>
 
       {/* ── Dialoghi modali ── */}
@@ -238,6 +261,7 @@ function App() {
           defaultColor={importDialog.color}
           onConfirm={handleImportConfirm}
           onCancel={() => setImportDialog(null)}
+          loading={importing}
         />
       )}
 
@@ -250,7 +274,7 @@ function App() {
 // ─── Dialogo di importazione artifact ────────────────────────────────────────
 // Permette di personalizzare nome, icona e colore prima dell'importazione.
 // Supporta conferma con Invio e chiusura con Esc.
-function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel }) {
+function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel, loading }) {
   const [name,  setName]  = useState(suggestedName)
   const [icon,  setIcon]  = useState(defaultIcon)
   const [color, setColor] = useState(defaultColor)
@@ -289,12 +313,13 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
             Annulla
           </button>
           <button
-            onClick={() => onConfirm(filePath, name, icon, color)}
-            style={{ padding: '7px 16px', fontSize: 13, color: '#fff', background: color, border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            onClick={() => !loading && onConfirm(filePath, name, icon, color)}
+            disabled={loading}
+            style={{ padding: '7px 16px', fontSize: 13, color: '#fff', background: color, border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s', opacity: loading ? 0.6 : 1, cursor: loading ? 'default' : 'pointer' }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85' }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1' }}
           >
-            Importa
+            {loading ? 'Importazione…' : 'Importa'}
           </button>
         </div>
       </div>
@@ -401,6 +426,31 @@ function ConfirmDeleteDialog({ course, onConfirm, onCancel }) {
       </div>
     </div>
   )
+}
+
+// ─── Error Boundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 40 }}>
+          <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Qualcosa è andato storto</p>
+          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0, maxWidth: 320, textAlign: 'center' }}>
+            {this.state.error?.message || 'Errore sconosciuto'}
+          </p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            style={{ marginTop: 6, padding: '7px 16px', fontSize: 13, color: 'var(--text-primary)', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
+          >
+            Riprova
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 export default App
