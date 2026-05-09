@@ -158,7 +158,7 @@ function VersionSection() {
               onClick={handleLogoClick}
             >
               <div key={pulseKey} style={{ animation: pulseKey > 0 ? 'logoPulse 0.55s ease forwards' : 'none' }}>
-                <SenseiLogo width={100} height={100} />
+                <SenseiLogo width={60} height={60} />
               </div>
             </div>
           </div>
@@ -168,7 +168,7 @@ function VersionSection() {
       {/* v: beta — nascosta durante il gioco */}
       {!gameActive && (
         <p style={{
-          position: 'absolute', bottom: 0, right: 0,
+          position: 'absolute', bottom: 10, right: 14,
           margin: 0, fontSize: 11, fontWeight: 700,
           fontFamily: "'Courier New', monospace",
           letterSpacing: '0.12em', textTransform: 'uppercase',
