@@ -73,4 +73,16 @@ contextBridge.exposeInMainWorld('sensei', {
   // Traccia errori di validazione artifact su logs/artifact-errors.jsonl (fire and forget)
   logArtifactError: (data) => ipcRenderer.invoke('artifact:log-error', data),
 
+  // Export artifact singolo → dialog salva → .jsx
+  exportArtifact: (filename) => ipcRenderer.invoke('artifact:export-single', filename),
+
+  // Export artifact multipli → dialog salva → .zip con manifest.json
+  exportArtifacts: (artifacts) => ipcRenderer.invoke('artifact:export-multiple', artifacts),
+
+  // Export progresso → dialog salva → .json
+  exportProgress: () => ipcRenderer.invoke('progress:export'),
+
+  // Import artifact da .zip (export Sensei)
+  importZip: () => ipcRenderer.invoke('artifact:import-zip'),
+
 })

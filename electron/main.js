@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, net } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const archiver = require('archiver')
+const AdmZip = require('adm-zip')
 
 // Controlla se siamo in modalità sviluppo
 const isDev = process.env.NODE_ENV === 'development'
@@ -569,6 +571,247 @@ ipcMain.handle('artifact:log-error', (event, { filename, errors, source, timesta
     fs.appendFileSync(logPath, entry, 'utf-8')
   } catch {
     // fire and forget — non blocca mai il flusso principale
+  }
+})
+
+// ─── EXPORT ARTIFACT SINGOLO ─────────────────────────────────────────────────
+
+ipcMain.handle('artifact:export-single', async (_, filename) => {
+  try {
+    const coursesDir = path.join(app.getPath('userData'), 'courses')
+    const srcPath    = path.join(coursesDir, filename)
+    if (!fs.existsSync(srcPath))
+      return { success: false, error: 'File non trovato' }
+
+    const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+      defaultPath: filename,
+      filters: [{ name: 'Sensei Artifact', extensions: ['jsx'] }],
+    })
+    if (canceled || !savePath) return { success: false, canceled: true }
+
+    fs.writeFileSync(savePath, fs.readFileSync(srcPath, 'utf-8'), 'utf-8')
+    return { success: true, path: savePath }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// ─── EXPORT ARTIFACT MULTIPLO (.zip) ─────────────────────────────────────────
+
+ipcMain.handle('artifact:export-multiple', async (_, artifacts) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10)
+    const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+      defaultPath: `sensei-export-${today}.zip`,
+      filters: [{ name: 'Sensei Export', extensions: ['zip'] }],
+    })
+    if (canceled || !savePath) return { success: false, canceled: true }
+
+    const coursesDir = path.join(app.getPath('userData'), 'courses')
+    const now = new Date().toISOString()
+
+    const manifest = {
+      exportDate:  now,
+      exportedBy:  `Sensei v${app.getVersion()}`,
+      artifacts: artifacts.map(a => ({
+        filename: a.filename,
+        title:    a.name || a.filename,
+        type:     a.type || 'sentiero',
+        tags:     a.tags ? (typeof a.tags === 'string' ? (() => { try { return JSON.parse(a.tags) } catch { return [] } })() : a.tags) : [],
+        xp:       a.xp || 0,
+        exportedAt: now,
+      })),
+    }
+
+    await new Promise((resolve, reject) => {
+      const output  = fs.createWriteStream(savePath)
+      const archive = archiver('zip', { zlib: { level: 6 } })
+      output.on('close', resolve)
+      archive.on('error', reject)
+      archive.pipe(output)
+
+      for (const a of artifacts) {
+        const filePath = path.join(coursesDir, a.filename)
+        if (fs.existsSync(filePath)) archive.file(filePath, { name: a.filename })
+      }
+
+      archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' })
+      archive.finalize()
+    })
+
+    return { success: true, path: savePath, count: artifacts.length }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// ─── EXPORT PROGRESSO (JSON) ──────────────────────────────────────────────────
+
+function computeStreak(msTimestamps) {
+  const daySet = new Set(msTimestamps.filter(Boolean).map(ts => new Date(ts).toISOString().slice(0, 10)))
+  const days   = [...daySet].sort()
+  if (!days.length) return { current: 0, longest: 0 }
+
+  let longest = 1, run = 1
+  for (let i = 1; i < days.length; i++) {
+    const gap = Math.round((new Date(days[i]) - new Date(days[i - 1])) / 86400000)
+    run = gap === 1 ? run + 1 : 1
+    if (run > longest) longest = run
+  }
+
+  let current = 0
+  let check = new Date(); check.setHours(0, 0, 0, 0)
+  while (daySet.has(check.toISOString().slice(0, 10))) {
+    current++
+    check = new Date(check - 86400000)
+  }
+  if (current === 0) {
+    check = new Date(Date.now() - 86400000); check.setHours(0, 0, 0, 0)
+    while (daySet.has(check.toISOString().slice(0, 10))) {
+      current++
+      check = new Date(check - 86400000)
+    }
+  }
+  return { current, longest }
+}
+
+ipcMain.handle('progress:export', async () => {
+  try {
+    const today = new Date().toISOString().slice(0, 10)
+    const { canceled, filePath: savePath } = await dialog.showSaveDialog({
+      defaultPath: `sensei-progress-${today}.json`,
+      filters: [{ name: 'Sensei Progress', extensions: ['json'] }],
+    })
+    if (canceled || !savePath) return { success: false, canceled: true }
+
+    const allCourses  = db.prepare('SELECT * FROM courses').all()
+    const allProgress = db.prepare('SELECT * FROM progress WHERE completed = 1').all()
+
+    const timestamps  = allProgress.map(p => p.completed_at).filter(Boolean)
+    const streak      = computeStreak(timestamps)
+    const lastTs      = timestamps.length ? Math.max(...timestamps) : null
+    const lastActivity = lastTs ? new Date(lastTs).toISOString() : null
+
+    const progressByCourse = {}
+    for (const p of allProgress) {
+      progressByCourse[p.course_id] = (progressByCourse[p.course_id] || 0) + 1
+    }
+
+    let totalXP = 0
+    const artifactsOut = {}
+    for (const course of allCourses) {
+      const completed = progressByCourse[course.id] || 0
+      const isCompleted = course.total_days > 0 && completed >= course.total_days
+      if (isCompleted && course.xp) totalXP += course.xp
+
+      const courseSteps = allProgress.filter(p => p.course_id === course.id)
+      const lastStep = courseSteps
+        .filter(p => p.completed_at)
+        .sort((a, b) => b.completed_at - a.completed_at)[0]
+
+      artifactsOut[course.filename] = {
+        stepsCompleted: completed,
+        totalSteps:     course.total_days || 0,
+        completedAt:    isCompleted && lastStep ? new Date(lastStep.completed_at).toISOString() : null,
+        xpEarned:       isCompleted && course.xp ? course.xp : 0,
+      }
+    }
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      exportedBy: `Sensei v${app.getVersion()}`,
+      stats: {
+        totalXP,
+        currentStreak:  streak.current,
+        longestStreak:  streak.longest,
+        totalCompleted: allProgress.length,
+        lastActivity,
+      },
+      artifacts: artifactsOut,
+    }
+
+    fs.writeFileSync(savePath, JSON.stringify(exportData, null, 2), 'utf-8')
+    return { success: true, path: savePath }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// ─── IMPORT ARTIFACT DA .zip ──────────────────────────────────────────────────
+
+ipcMain.handle('artifact:import-zip', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      filters:    [{ name: 'Sensei Export', extensions: ['zip'] }],
+      properties: ['openFile'],
+    })
+    if (canceled || !filePaths.length) return { success: false, canceled: true }
+
+    const zip = new AdmZip(filePaths[0])
+
+    const manifestEntry = zip.getEntry('manifest.json')
+    if (!manifestEntry)
+      return { success: false, error: 'File zip non valido — manifest.json mancante' }
+
+    let manifest
+    try {
+      manifest = JSON.parse(manifestEntry.getData().toString('utf-8'))
+    } catch {
+      return { success: false, error: 'manifest.json non valido o corrotto' }
+    }
+
+    if (!manifest.artifacts || !Array.isArray(manifest.artifacts))
+      return { success: false, error: 'Formato manifest non riconosciuto — non è un export Sensei' }
+
+    const coursesDir = path.join(app.getPath('userData'), 'courses')
+    fs.mkdirSync(coursesDir, { recursive: true })
+
+    let imported = 0
+    const skipped = []
+
+    for (const artifactMeta of manifest.artifacts) {
+      const origFilename = artifactMeta.filename
+      if (!origFilename || !origFilename.endsWith('.jsx')) continue
+
+      const entry = zip.getEntry(origFilename)
+      if (!entry) { skipped.push(origFilename); continue }
+
+      const raw = entry.getData().toString('utf-8')
+      const cleanCode = sanitizeContent(raw)
+
+      const slug      = origFilename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
+      const courseId  = `${Date.now()}-${slug}`
+      const newFilename = `${courseId}.jsx`
+      const destPath  = path.join(coursesDir, newFilename)
+
+      // Skip se esiste già un file con lo stesso slug base
+      const existing = db.prepare("SELECT id FROM courses WHERE filename LIKE ?").get(`%-${slug}.jsx`)
+      if (existing) { skipped.push(origFilename); continue }
+
+      fs.writeFileSync(destPath, cleanCode, 'utf-8')
+
+      const meta  = detectArtifactMeta(cleanCode)
+      const name  = artifactMeta.title || meta.title || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+      db.prepare(`
+        INSERT OR REPLACE INTO courses
+          (id, name, filename, total_days, icon, color, type, tags, estimated_minutes, xp, completion_rule, version, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        courseId, name, newFilename, meta.totalSteps || 0,
+        'BookOpen', '#378ADD',
+        meta.type || artifactMeta.type || 'sentiero',
+        meta.tags || null, meta.estimatedMinutes || null,
+        meta.xp || artifactMeta.xp || null,
+        meta.completionRule || null, meta.version || null, meta.description || null
+      )
+
+      imported++
+    }
+
+    return { success: true, imported, skipped }
+  } catch (err) {
+    return { success: false, error: err.message }
   }
 })
 

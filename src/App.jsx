@@ -179,6 +179,44 @@ function App() {
     }
   }
 
+  const handleExportSingle = async (course) => {
+    const result = await window.sensei.exportArtifact(course.filename)
+    if (result?.success) toastSuccess('Artifact esportato', result.path.split(/[\\/]/).pop())
+    else if (result && !result.canceled) toastError('Export fallito', result.error || '')
+  }
+
+  const handleExportMultiple = async (selectedCourses) => {
+    const artifacts = selectedCourses.map(c => ({
+      filename: c.filename,
+      name:     c.name,
+      type:     c.type || 'sentiero',
+      tags:     c.tags,
+      xp:       c.xp || 0,
+    }))
+    const result = await window.sensei.exportArtifacts(artifacts)
+    if (result?.success) toastSuccess(`${result.count} artifact esportati`, result.path.split(/[\\/]/).pop())
+    else if (result && !result.canceled) toastError('Export fallito', result.error || '')
+  }
+
+  const handleExportProgress = async () => {
+    const result = await window.sensei.exportProgress()
+    if (result?.success) toastSuccess('Progresso esportato', result.path.split(/[\\/]/).pop())
+    else if (result && !result.canceled) toastError('Export fallito', result.error || '')
+  }
+
+  const handleImportZip = async () => {
+    const result = await window.sensei.importZip()
+    if (result?.success) {
+      const msg = result.skipped?.length
+        ? `${result.skipped.length} file saltati`
+        : `${result.imported} importati`
+      toastSuccess(`${result.imported} artifact importati`, msg)
+      loadCourses()
+    } else if (result && !result.canceled) {
+      toastError('Import fallito', result.error || '')
+    }
+  }
+
   const handleRemove = (course) => setConfirmDelete(course)
 
   const handleRemoveConfirm = async () => {
@@ -227,6 +265,9 @@ function App() {
               onCreate={() => handleNavigate('create')}
               onRemove={handleRemove}
               justCompleted={justCompleted}
+              onExport={handleExportSingle}
+              onExportMultiple={handleExportMultiple}
+              onImportZip={handleImportZip}
             />
           )}
 
@@ -244,7 +285,7 @@ function App() {
           )}
 
           {currentView === 'progress' && (
-            <Progress onBack={() => handleNavigate('home')} courses={courses} />
+            <Progress onBack={() => handleNavigate('home')} courses={courses} onExportProgress={handleExportProgress} />
           )}
 
           {currentView === 'create' && !currentCreateMode && (

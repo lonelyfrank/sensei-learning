@@ -7,7 +7,7 @@ import CourseProgressList from '../progress/CourseProgressList.jsx'
 import { calculateXP } from '../progress/xpSystem.jsx'
 import { calculateStreak, calculateActivity } from '../progress/utils.js'
 
-function Progress({ onBack, courses }) {
+function Progress({ onBack, courses, onExportProgress }) {
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
@@ -75,6 +75,17 @@ function Progress({ onBack, courses }) {
           Indietro
         </button>
         <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)' }}>Progressi</h1>
+        <div style={{ flex: 1 }} />
+        {onExportProgress && (
+          <button
+            onClick={onExportProgress}
+            style={{ fontSize: 12, padding: '5px 12px', color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Esporta progresso
+          </button>
+        )}
       </div>
 
       {!stats ? (

@@ -80,7 +80,7 @@ function sortCourses(courses, sortBy) {
   })
 }
 
-function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompleted }) {
+function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompleted, onExport, onExportMultiple, onImportZip }) {
   const [view, setView] = useState('grid')
   const [search, setSearch] = useState('')
   const [sentieroFilter, setSentieroFilter] = useState('Tutti')
@@ -88,8 +88,25 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
   const [sortBy, setSortBy] = useState('date')
   const [openSentieri, setOpenSentieri] = useState(() => getSectionState('sentieri'))
   const [openLeaflet, setOpenLeaflet] = useState(() => getSectionState('leaflet'))
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   const toggleSection = (key, val, setter) => { setter(!val); setSectionState(key, !val) }
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const exitSelectionMode = () => { setSelectionMode(false); setSelectedIds(new Set()) }
+
+  const handleExportSelected = () => {
+    onExportMultiple(courses.filter(c => selectedIds.has(c.id)))
+    exitSelectionMode()
+  }
 
   // Dati derivati memoizzati — ricalcolati solo quando cambiano le dipendenze
   const sentieri = useMemo(() => courses.filter(c => c.type === 'sentiero' || !c.type), [courses])
@@ -144,26 +161,61 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
           <SearchBar value={search} onChange={setSearch} />
 
           {/* Ordinamento */}
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            style={{
-              fontSize: 12, padding: '5px 8px',
-              color: 'var(--text-secondary)', background: 'var(--bg-secondary)',
-              border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
-              outline: 'none', cursor: 'pointer', flexShrink: 0,
-            }}
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.id} value={o.id}>{o.label}</option>
-            ))}
-          </select>
+          {!selectionMode && (
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              style={{
+                fontSize: 12, padding: '5px 8px',
+                color: 'var(--text-secondary)', background: 'var(--bg-secondary)',
+                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                outline: 'none', cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              {SORT_OPTIONS.map(o => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Pulsanti import .zip / esporta / annulla */}
+          {selectionMode ? (
+            <button
+              onClick={exitSelectionMode}
+              style={{ fontSize: 12, padding: '5px 10px', color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              Annulla selezione
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onImportZip}
+                style={{ fontSize: 12, padding: '5px 10px', color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                Importa .zip
+              </button>
+              <button
+                onClick={() => setSelectionMode(true)}
+                style={{ fontSize: 12, padding: '5px 10px', color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                Esporta
+              </button>
+            </>
+          )}
 
           {/* Toggle griglia/lista */}
-          <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3, flexShrink: 0 }}>
-            <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
-            <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
-          </div>
+          {!selectionMode && (
+            <div style={{ display: 'flex', gap: 4, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 3, flexShrink: 0 }}>
+              <ViewButton active={view === 'grid'} onClick={() => setView('grid')}><GridIcon /></ViewButton>
+              <ViewButton active={view === 'list'} onClick={() => setView('list')}><ListIcon /></ViewButton>
+            </div>
+          )}
         </div>
       </div>
 
@@ -172,7 +224,7 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
         <Section title={`Risultati per "${search}" — ${searchResults.length} trovati`}>
           <CourseGrid view={view}>
             {searchResults.map(course => (
-              <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} isLeaflet={course.type === 'leaflet'} showTypeBadge />
+              <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} isLeaflet={course.type === 'leaflet'} showTypeBadge onExport={onExport} selected={selectionMode && selectedIds.has(course.id)} onSelect={selectionMode ? toggleSelect : undefined} />
             ))}
             {searchResults.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-tertiary)', padding: '12px 0' }}>Nessun risultato trovato.</p>}
           </CourseGrid>
@@ -188,7 +240,7 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
               <Section title="In corso">
                 <CourseGrid view={view}>
                   {inProgress.map(course => (
-                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} justCompleted={justCompleted} />
+                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} justCompleted={justCompleted} onExport={onExport} selected={selectionMode && selectedIds.has(course.id)} onSelect={selectionMode ? toggleSelect : undefined} />
                   ))}
                 </CourseGrid>
               </Section>
@@ -209,7 +261,7 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
           >
             <CourseGrid view={view}>
               {sentieriFiltered.map(course => (
-                <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} justCompleted={justCompleted} />
+                <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isCompleted={course.progress === 100} justCompleted={justCompleted} onExport={onExport} selected={selectionMode && selectedIds.has(course.id)} onSelect={selectionMode ? toggleSelect : undefined} />
               ))}
               <ImportCard view={view} onClick={onImport} />
             </CourseGrid>
@@ -231,7 +283,7 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
               >
                 <CourseGrid view={view}>
                   {leafletFiltered.map(course => (
-                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isLeaflet />
+                    <CourseCard key={course.id} course={course} view={view} onClick={() => onSelectCourse(course)} onRemove={onRemove} isLeaflet onExport={onExport} selected={selectionMode && selectedIds.has(course.id)} onSelect={selectionMode ? toggleSelect : undefined} />
                   ))}
                   <ImportCard view={view} onClick={onImport} label="Importa leaflet" />
                 </CourseGrid>
@@ -239,6 +291,36 @@ function Home({ courses, onSelectCourse, onImport, onCreate, onRemove, justCompl
             </>
           )}
         </>
+      )}
+
+      {/* ── BARRA SELEZIONE MULTIPLA ── */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 50,
+        }}>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            {selectedIds.size} {selectedIds.size === 1 ? 'artifact selezionato' : 'artifact selezionati'}
+          </span>
+          <button
+            onClick={handleExportSelected}
+            style={{ padding: '6px 14px', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'opacity 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Esporta .zip
+          </button>
+          <button
+            onClick={exitSelectionMode}
+            style={{ padding: '6px 14px', fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Annulla
+          </button>
+        </div>
       )}
     </div>
   )

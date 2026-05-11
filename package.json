@@ -34,15 +34,23 @@
       }
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "public/sensei-learning-icon.icns"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "public/sensei-learning-icon.ico"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "public/sensei-learning-icon.png",
       "category": "Education"
     },
@@ -52,6 +60,8 @@
     }
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
+    "archiver": "^8.0.0",
     "better-sqlite3": "^12.9.0",
     "lucide-react": "^0.383.0",
     "react": "^18.3.1",
@@ -59,11 +69,11 @@
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.27.0",
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "electron": "^41.2.1",
     "electron-builder": "^26.8.1",
-    "@eslint/js": "^9.27.0",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-react": "^7.37.5",
