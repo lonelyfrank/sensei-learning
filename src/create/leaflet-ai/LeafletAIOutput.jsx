@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { LEAFLET_PROMPT_BASE } from './leafletPrompt.js'
 import SenseiLogo from '../../assets/sensei-logo.svg?react'
 import IconPicker from '../../components/IconPicker.jsx'

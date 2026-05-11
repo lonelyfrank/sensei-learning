@@ -126,7 +126,7 @@ NODE_ENV=development npm run dev
 
 - [ ] Build/installer cross-platform (Windows, macOS, Linux) con electron-builder
 - [ ] Test cross-platform v1.0
-- [ ] Libreria pubblica di sentieri e leaflet
+- [ ] Collezioni — organizza i tuoi artifact in gruppi
 - [ ] Compatibilità progressiva con artifact non nativi
 - [ ] Editor visuale artifact
 - [ ] Template predefiniti

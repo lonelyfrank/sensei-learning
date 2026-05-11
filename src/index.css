@@ -489,14 +489,6 @@ button {
   100% { left: 110%; width: 50%; }
 }
 
-@keyframes onboardingFloat {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-7px); }
-}
-@keyframes onboardingGlow {
-  0%, 100% { opacity: 0.10; transform: scale(1); }
-  50%       { opacity: 0.22; transform: scale(1.08); }
-}
 
 /* Scrollbar */
 * {

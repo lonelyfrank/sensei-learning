@@ -190,7 +190,7 @@ function Sidebar({ collapsed, onCollapse, onExpand, onNavigate, currentView, cou
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<GridIcon />} label="I miei sentieri" active={currentView === 'home'} onClick={() => onNavigate('home')} />
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<PlusIcon />} label="Importa" onClick={onImport} />
           <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<CreateIcon />} label="Crea" onClick={() => onNavigate('create')} />
-          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<LibraryIcon />} label="Libreria" disabled badge="presto" />
+          <NavItem collapsed={contentCollapsed} labelNow={collapsed} icon={<LibraryIcon />} label="Collezioni" disabled badge="presto" />
         </div>
 
         {/* ── IN CORSO — grid trick: 0fr→1fr è la sola animazione height→auto fluida in CSS ── */}
