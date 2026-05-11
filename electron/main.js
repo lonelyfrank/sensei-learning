@@ -349,10 +349,14 @@ ipcMain.handle('update-user', (event, name, avatar) => {
   return { success: true }
 })
 
-// Apre un URL nel browser di sistema — solo https://
+// Apre un URL nel browser di sistema — solo https:// con URL valida
 ipcMain.handle('open-external', (event, url) => {
-  if (typeof url !== 'string' || !url.startsWith('https://')) return
-  shell.openExternal(url)
+  if (typeof url !== 'string') return
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') return
+    shell.openExternal(url)
+  } catch { return }
 })
 
 // Restituisce la versione dell'app da package.json
@@ -614,7 +618,7 @@ function sanitizeApostrophes(code) {
     const m = line.match(/^(\s*\w+\s*:\s*')(.*)',?\s*$/)
     if (!m) return line
     const content = m[2]
-    const unescaped = (content.match(/(?<!\\)'/g) || []).length
+    const unescaped = (content.match(/'/g) || []).length
     if (unescaped === 0) return line
     const safe     = content.replace(/"/g, '\\"')
     const hasComma = line.trimEnd().endsWith("',")

@@ -3,7 +3,7 @@
 // Carica il file, lo trasforma per renderlo eseguibile in un iframe sandboxato,
 // e funge da ponte tra lo storage persistente (SQLite) e l'artifact.
 
-import React, { useEffect, useState, useRef, Component } from 'react'
+import React, { useEffect, useMemo, useState, useRef, Component } from 'react'
 
 // Nomi di built-in JavaScript che collidono con icone Lucide omonime.
 // Es: l'icona Lucide "Map" sovrascrive window.Map — causa crash negli artifact
@@ -175,11 +175,15 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
   // Ref (non state) perché non deve causare re-render al cambio.
   const completedNotified = useRef(false)
 
-  // Carica il corso e registra il listener per i messaggi storage dell'iframe.
-  // Si ri-esegue solo quando cambia il corso visualizzato.
+  // Carica il corso quando cambia il corso visualizzato.
   useEffect(() => {
     loadCourse()
     completedNotified.current = false
+  }, [course.id])
+
+  // Listener messaggi iframe — si ri-registra quando cambiano le callback del parent
+  // così la closure cattura sempre onProgressUpdate/onComplete aggiornati.
+  useEffect(() => {
     const handleMessage = (event) => {
       // Fonte: deve essere l'iframe dell'artifact
       if (event.source !== iframeRef.current?.contentWindow) return
@@ -198,7 +202,7 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [course.id])
+  }, [course.id, onProgressUpdate, onComplete])
 
   // Scorciatoia F5 per ricaricare l'artifact senza ricaricare Electron.
   useEffect(() => {
@@ -293,6 +297,12 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
     }
   }
 
+  // Memoizzato: trasforma il JSX con Babel solo quando cambia il sorgente o il bundle.
+  const iframeDoc = useMemo(
+    () => courseCode && lucideBundle ? generateHTML(courseCode, lucideBundle, ALLOWED_ORIGIN) : null,
+    [courseCode, lucideBundle]
+  )
+
   // L'iframe intercetta i mousemove al suo interno (frame separato).
   // Questo overlay sul bordo sinistro propaga gli eventi al window principale
   // così la bulge della sidebar risponde anche quando il cursore è sull'iframe.
@@ -357,7 +367,7 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
             <iframe
               key={reloadKey}
               ref={iframeRef}
-              srcDoc={generateHTML(courseCode, lucideBundle, ALLOWED_ORIGIN)}
+              srcDoc={iframeDoc}
               style={{ width: '100%', height: '100%', border: 'none' }}
               sandbox="allow-scripts allow-same-origin"
               title={course.name}

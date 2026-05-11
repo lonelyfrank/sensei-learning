@@ -20,6 +20,18 @@ import {
   FileCode, FileText, Folder, FolderOpen, Archive, Package,
   GitBranch, GitCommit, Box,
   Sparkles, Diamond, Medal, Award, Flag, Bookmark, Tag,
+  Pen, Feather, WandSparkles,
+  Sigma, Pi, Infinity, FlaskConical, Dna,
+  Languages,
+  Calendar, Clock, Timer, Hourglass,
+  DollarSign, Banknote,
+  ClipboardList, ListChecks,
+  User, ThumbsUp, Share2,
+  House, Building2, Plane, Car,
+  Utensils, ChefHat, Pizza,
+  TreePine, Mountain, Flower,
+  Eye, Search, Download, Upload,
+  Bot, Fingerprint, SlidersHorizontal,
 } from 'lucide-react'
 
 // Mappa nome → componente
@@ -41,6 +53,18 @@ export const ICONS = {
   FileCode, FileText, Folder, FolderOpen, Archive, Package,
   GitBranch, GitCommit, Box,
   Sparkles, Diamond, Medal, Award, Flag, Bookmark, Tag,
+  Pen, Feather, WandSparkles,
+  Sigma, Pi, Infinity, FlaskConical, Dna,
+  Languages,
+  Calendar, Clock, Timer, Hourglass,
+  DollarSign, Banknote,
+  ClipboardList, ListChecks,
+  User, ThumbsUp, Share2,
+  House, Building2, Plane, Car,
+  Utensils, ChefHat, Pizza,
+  TreePine, Mountain, Flower,
+  Eye, Search, Download, Upload,
+  Bot, Fingerprint, SlidersHorizontal,
 }
 
 // Nomi di tutte le icone disponibili
