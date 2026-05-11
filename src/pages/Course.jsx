@@ -3,7 +3,7 @@
 // Carica il file, lo trasforma per renderlo eseguibile in un iframe sandboxato,
 // e funge da ponte tra lo storage persistente (SQLite) e l'artifact.
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Component } from 'react'
 
 // Nomi di built-in JavaScript che collidono con icone Lucide omonime.
 // Es: l'icona Lucide "Map" sovrascrive window.Map — causa crash negli artifact
@@ -163,7 +163,7 @@ function generateHTML(code, lucide) {
 </html>`
 }
 
-function Course({ course, onBack, onProgressUpdate, onComplete }) {
+function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
   const [courseCode, setCourseCode]   = useState(null)
   const [lucideBundle, setLucideBundle] = useState(null)
   const [error, setError]             = useState(null)
@@ -337,10 +337,7 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
       {/* ── Area artifact ── */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {error && (
-          <div style={{ padding: 32, color: '#E24B4A', fontSize: 13, textAlign: 'center' }}>
-            <p>Errore nel caricamento dell'artifact.</p>
-            <p style={{ color: 'var(--text-tertiary)', marginTop: 8, fontSize: 12 }}>{error}</p>
-          </div>
+          <ArtifactErrorScreen error={error} onRetry={reloadCourse} onBack={onBack} />
         )}
         {!error && (!courseCode || !lucideBundle) && (
           <div style={{ padding: 32, color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center' }}>
@@ -373,4 +370,96 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
   )
 }
 
-export default Course
+// ── Schermata errore artifact ─────────────────────────────────────────────────
+// Usata sia dalla error boundary (crash React) sia per errori postMessage iframe.
+function ArtifactErrorScreen({ error, onRetry, onBack }) {
+  const [showDetails, setShowDetails] = useState(false)
+  const msg = error instanceof Error ? error.message : (error || 'Errore sconosciuto')
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: '100%', padding: 40, gap: 16, textAlign: 'center',
+    }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#E24B4A18', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#E24B4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+          Contenuto non disponibile
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+          Questo artifact ha riscontrato un errore.
+        </p>
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 480 }}>
+        <button
+          onClick={() => setShowDetails(v => !v)}
+          style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: 4, margin: '0 auto' }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: showDetails ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+            <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {showDetails ? 'Nascondi dettagli' : 'Mostra dettagli tecnici'}
+        </button>
+        {showDetails && (
+          <pre style={{ marginTop: 8, padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 200, overflowY: 'auto' }}>
+            {msg}
+          </pre>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+        <button
+          onClick={onRetry}
+          style={{ padding: '8px 18px', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'opacity 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          Riprova
+        </button>
+        <button
+          onClick={onBack}
+          style={{ padding: '8px 18px', fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'transparent', cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          Torna alla dashboard
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Error Boundary per l'artifact ─────────────────────────────────────────────
+// Intercetta crash React durante il render/lifecycle e mostra ArtifactErrorScreen.
+// "Riprova" resetta la boundary → React rimonta i figli → useEffect rilancia loadCourse.
+class ArtifactErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <ArtifactErrorScreen
+          error={this.state.error}
+          onRetry={() => this.setState({ error: null })}
+          onBack={this.props.onBack}
+        />
+      )
+    }
+    return this.props.children
+  }
+}
+
+function CourseInner({ course, onBack, onProgressUpdate, onComplete }) {
+  return (
+    <ArtifactErrorBoundary onBack={onBack}>
+      <CourseContent course={course} onBack={onBack} onProgressUpdate={onProgressUpdate} onComplete={onComplete} />
+    </ArtifactErrorBoundary>
+  )
+}
+
+export default CourseInner
