@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { LEAFLET_PROMPT_BASE } from './leafletPrompt.js'
 import SenseiLogo from '../../assets/sensei-logo.svg?react'
 import IconPicker from '../../components/IconPicker.jsx'
@@ -17,6 +17,63 @@ const STARS = [
   { x:  54, y:  40, size: 4, anim: 'driftSE', dur: 4.0, delay: 0.4 },
   { x: -56, y:  38, size: 3, anim: 'driftSW', dur: 3.9, delay: 2.3 },
 ]
+
+function GeneratingScreen({ messages, stars }) {
+  const [idx,       setIdx]       = useState(0)
+  const [displayed, setDisplayed] = useState('')
+  const [charIdx,   setCharIdx]   = useState(0)
+
+  useEffect(() => {
+    const msg = messages[idx]
+    if (charIdx < msg.length) {
+      const t = setTimeout(() => {
+        setDisplayed(msg.slice(0, charIdx + 1))
+        setCharIdx(c => c + 1)
+      }, 38)
+      return () => clearTimeout(t)
+    } else {
+      const t = setTimeout(() => {
+        let next
+        do { next = Math.floor(Math.random() * messages.length) } while (next === idx && messages.length > 1)
+        setIdx(next)
+        setDisplayed('')
+        setCharIdx(0)
+      }, 1800)
+      return () => clearTimeout(t)
+    }
+  }, [charIdx, idx])
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0 }}>
+        {stars.map((s, i) => (
+          <div key={i} style={{ position: 'absolute', left: `calc(50% + ${s.x}px)`, top: `calc(50% + ${s.y}px)`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+            <div style={{ animation: `${s.anim} ${s.dur}s ease-in-out ${s.delay}s infinite`, color: 'var(--text-primary)' }}>
+              <svg width={s.size} height={s.size} viewBox="-1 -1 2 2">
+                <path d="M0 -1 L0.25 -0.25 L1 0 L0.25 0.25 L0 1 L-0.25 0.25 L-1 0 L-0.25 -0.25Z" fill="currentColor" />
+              </svg>
+            </div>
+          </div>
+        ))}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}>
+          <div style={{ animation: 'senseiTravel 7s linear infinite' }}>
+            <div className="sensei-blink" style={{ color: 'var(--text-primary)', animation: 'senseiGlow 7s linear infinite' }}>
+              <SenseiLogo width={80} height={80} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', margin: 0, minHeight: 20, fontFamily: 'monospace', letterSpacing: '0.01em' }}>
+        {displayed}<span style={{ opacity: charIdx < messages[idx].length ? 1 : 0, transition: 'opacity 0.1s' }}>▋</span>
+      </p>
+
+      <div style={{ width: 260, height: 3, borderRadius: 2, background: 'var(--bg-tertiary)', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ position: 'absolute', height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #378ADD88, #378ADD, #7F77DD)', animation: 'aiProgress 1.6s ease-in-out infinite' }} />
+      </div>
+    </div>
+  )
+}
 
 function ChevronIcon({ open }) {
   return (
@@ -126,30 +183,23 @@ function LeafletAIOutput({ userSection, setUserSection, suggestedName, onBack, o
 
   // ── Generazione in corso ─────────────────────────────────────────────────────
   if (genState === 'generating') {
-    return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <div style={{ position: 'relative', width: 180, height: 180, marginBottom: 8, flexShrink: 0 }}>
-          {STARS.map((s, i) => (
-            <div key={i} style={{ position: 'absolute', left: `calc(50% + ${s.x}px)`, top: `calc(50% + ${s.y}px)`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
-              <div style={{ animation: `${s.anim} ${s.dur}s ease-in-out ${s.delay}s infinite`, color: 'var(--text-primary)' }}>
-                <svg width={s.size} height={s.size} viewBox="-1 -1 2 2">
-                  <path d="M0 -1 L0.25 -0.25 L1 0 L0.25 0.25 L0 1 L-0.25 0.25 L-1 0 L-0.25 -0.25Z" fill="currentColor" />
-                </svg>
-              </div>
-            </div>
-          ))}
-          <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-            <div style={{ animation: 'senseiTravel 7s linear infinite' }}>
-              <div className="sensei-blink" style={{ color: 'var(--text-primary)', animation: 'senseiGlow 7s linear infinite' }}>
-                <SenseiLogo width={80} height={80} />
-              </div>
-            </div>
-          </div>
-        </div>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Generazione in corso…</p>
-        <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Claude sta scrivendo il tuo leaflet</p>
-      </div>
-    )
+    return <GeneratingScreen messages={[
+      'Sto generando il contenuto...',
+      'Sto strutturando i passaggi...',
+      'Sto rifinendo l\'artifact...',
+      'Quasi pronto...',
+      'Sto costruendo il tuo leaflet...',
+      'Sto organizzando i concetti chiave...',
+      'Sto preparando gli esempi pratici...',
+      'Sto definendo gli obiettivi di apprendimento...',
+      'Sto bilanciando teoria e pratica...',
+      'Sto affinando i dettagli...',
+      'Sto verificando la struttura...',
+      'Il tuo artifact sta prendendo forma...',
+      'Sto ottimizzando il percorso...',
+      'Sto aggiungendo gli ultimi dettagli...',
+      'Ci siamo quasi...',
+    ]} stars={STARS} />
   }
 
   // ── Layout principale (idle / error / done) ──────────────────────────────────
