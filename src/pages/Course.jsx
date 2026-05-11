@@ -80,7 +80,7 @@ function transformCode(code) {
 // Architettura: Tailwind + React 18 + Lucide bundle locale + Babel standalone.
 // window.storage: bridge postMessage verso il main process (storage asincrono).
 // __nativeMap/__nativeSet: preserva i built-in JS prima che Lucide li sovrascriva.
-function generateHTML(code, lucide) {
+function generateHTML(code, lucide, parentOrigin) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -117,12 +117,13 @@ function generateHTML(code, lucide) {
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <script>
+    const __SENSEI_ORIGIN = ${JSON.stringify(parentOrigin)}
     window.onerror = (msg, _src, _line, _col, err) => {
-      window.parent.postMessage({ type: 'sensei-artifact-error', message: err?.message || msg }, '*')
+      window.parent.postMessage({ channel: 'sensei', type: 'sensei-artifact-error', message: err?.message || msg }, __SENSEI_ORIGIN)
       return true
     }
     window.addEventListener('unhandledrejection', (e) => {
-      window.parent.postMessage({ type: 'sensei-artifact-error', message: e.reason?.message || 'Errore sconosciuto' }, '*')
+      window.parent.postMessage({ channel: 'sensei', type: 'sensei-artifact-error', message: e.reason?.message || 'Errore sconosciuto' }, __SENSEI_ORIGIN)
     })
   </script>
   <script>
@@ -138,7 +139,7 @@ function generateHTML(code, lucide) {
       return new Promise((resolve) => {
         const id = ++msgId
         pending[id] = resolve
-        window.parent.postMessage({ type: 'sensei-storage-' + type, id, ...data }, '*')
+        window.parent.postMessage({ channel: 'sensei', type: 'sensei-storage-' + type, id, ...data }, __SENSEI_ORIGIN)
       })
     }
     window.storage = {
@@ -180,8 +181,15 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
     loadCourse()
     completedNotified.current = false
     const handleMessage = (event) => {
+      // Fonte: deve essere l'iframe dell'artifact
       if (event.source !== iframeRef.current?.contentWindow) return
-      if (!event.data || typeof event.data.type !== 'string') return
+      // Origine: dev→localhost, prod→file://
+      // I srcDoc iframe serializzano sempre origin come 'null' (spec HTML) — entrambi accettati
+      if (event.origin !== ALLOWED_ORIGIN && event.origin !== 'null') return
+      // Schema: tutti i messaggi Sensei portano channel: 'sensei'
+      if (!event.data || event.data.channel !== 'sensei') return
+      if (typeof event.data.type !== 'string') return
+
       if (event.data.type === 'sensei-artifact-error') {
         setError(event.data.message || 'Errore nell\'artifact')
         return
@@ -349,7 +357,7 @@ function CourseContent({ course, onBack, onProgressUpdate, onComplete }) {
             <iframe
               key={reloadKey}
               ref={iframeRef}
-              srcDoc={generateHTML(courseCode, lucideBundle)}
+              srcDoc={generateHTML(courseCode, lucideBundle, ALLOWED_ORIGIN)}
               style={{ width: '100%', height: '100%', border: 'none' }}
               sandbox="allow-scripts allow-same-origin"
               title={course.name}
