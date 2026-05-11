@@ -212,7 +212,7 @@ ipcMain.handle('get-courses', () => {
 ipcMain.handle('read-course-file', (event, filename) => {
   const filePath = path.join(app.getPath('userData'), 'courses', filename)
   if (!fs.existsSync(filePath)) return null
-  return fs.readFileSync(filePath, 'utf-8')
+  return sanitizeApostrophes(fs.readFileSync(filePath, 'utf-8'))
 })
 
 // Serve il bundle IIFE di lucide-react locale (generato in public/ via build script)
@@ -537,6 +537,7 @@ function sanitizeContent(code) {
   }
   s = s.replace(/[\u2018\u2019]/g, "'")
   s = s.replace(/[\u201c\u201d]/g, '"')
+  s = sanitizeApostrophes(s)
   s = rewriteDeprecatedLucideIcons(s)
   return s.trim()
 }
@@ -613,11 +614,13 @@ function sanitizeApostrophes(code) {
     const m = line.match(/^(\s*\w+\s*:\s*')(.*)',?\s*$/)
     if (!m) return line
     const content = m[2]
-    // conta apostrofi non preceduti da backslash
     const unescaped = (content.match(/(?<!\\)'/g) || []).length
     if (unescaped === 0) return line
-    const fixed = content.replace(/(?<!\\)'/g, '\u2019') // → ' curvo U+2019
-    return line.replace(`'${content}'`, `'${fixed}'`)
+    const safe     = content.replace(/"/g, '\\"')
+    const hasComma = line.trimEnd().endsWith("',")
+    const from     = hasComma ? `'${content}',` : `'${content}'`
+    const to       = hasComma ? `"${safe}",`    : `"${safe}"`
+    return line.replace(from, to)
   }).join('\n')
 }
 
