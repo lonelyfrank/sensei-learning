@@ -434,6 +434,12 @@ function stripMarkdownFence(code) {
 // ─── SANITIZE / VALIDATE (mirror di src/utils/ — main.js è CJS, non importa ESM) ──
 
 const ALLOWED_IMPORTS = ['react', 'lucide-react']
+const LUCIDE_SET = (() => {
+  try {
+    const list = require('../src/utils/lucide-whitelist.json')
+    return new Set(list)
+  } catch { return new Set() }
+})()
 
 function sanitizeContent(code) {
   let s = code
@@ -473,6 +479,16 @@ function validateContent(content) {
   const forbidden = importMatches.map(m => m[1]).filter(src => !ALLOWED_IMPORTS.includes(src))
   if (forbidden.length > 0)
     errors.push(`Import non consentiti: ${forbidden.join(', ')} — usa solo react e lucide-react`)
+
+  if (LUCIDE_SET.size > 0) {
+    const lucideImport = content.match(/^import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/m)
+    if (lucideImport) {
+      const icons = lucideImport[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)
+      const unknown = icons.filter(name => !LUCIDE_SET.has(name))
+      if (unknown.length > 0)
+        errors.push(`Icone non disponibili: ${unknown.join(', ')}. Rimuovile o sostituiscile.`)
+    }
+  }
 
   const lines = content.trimEnd().split('\n')
   let lastMeaningful = ''

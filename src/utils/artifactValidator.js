@@ -1,5 +1,8 @@
+import { LUCIDE_WHITELIST } from './lucideWhitelist.js'
+
 const ALLOWED_IMPORTS = ['react', 'lucide-react']
 const VALID_COMPLETION_RULES = ['all-steps', 'any-step', 'manual']
+const LUCIDE_SET = new Set(LUCIDE_WHITELIST)
 
 export function validateArtifact(content) {
   const errors   = []
@@ -19,6 +22,15 @@ export function validateArtifact(content) {
   const forbidden = importMatches.map(m => m[1]).filter(src => !ALLOWED_IMPORTS.includes(src))
   if (forbidden.length > 0)
     errors.push(`Import non consentiti: ${forbidden.join(', ')} — usa solo react e lucide-react`)
+
+  // Valida icone Lucide contro il whitelist della versione installata
+  const lucideImport = content.match(/^import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/m)
+  if (lucideImport) {
+    const icons = lucideImport[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)
+    const unknown = icons.filter(name => !LUCIDE_SET.has(name))
+    if (unknown.length > 0)
+      errors.push(`Icone non disponibili: ${unknown.join(', ')}. Rimuovile o sostituiscile.`)
+  }
 
   const lines = content.trimEnd().split('\n')
   let lastMeaningful = ''

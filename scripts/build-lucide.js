@@ -33,3 +33,19 @@ ${cjs}
 fs.writeFileSync(outPath, bundle, 'utf-8')
 const kb = (fs.statSync(outPath).size / 1024).toFixed(1)
 console.log(`public/lucide-react.min.js — lucide-react v${version} — ${kb} KB`)
+
+// Genera anche il whitelist ESM (per il renderer) e JSON (per main.js)
+// Estrae i nomi dal file .d.ts per evitare di caricare React in Node.js
+const dtsPath = path.join(__dirname, '../node_modules/lucide-react/dist/lucide-react.d.ts')
+const dts = fs.readFileSync(dtsPath, 'utf-8')
+const names = [...dts.matchAll(/^declare const ([A-Z][A-Za-z0-9]+):/gm)]
+  .map(m => m[1])
+  .sort()
+
+const esmPath  = path.join(__dirname, '../src/utils/lucideWhitelist.js')
+const jsonPath = path.join(__dirname, '../src/utils/lucide-whitelist.json')
+
+const esmContent = `export const LUCIDE_WHITELIST = [\n  ${names.map(n => JSON.stringify(n)).join(',\n  ')},\n]\n`
+fs.writeFileSync(esmPath,  esmContent, 'utf-8')
+fs.writeFileSync(jsonPath, JSON.stringify(names), 'utf-8')
+console.log(`src/utils/lucideWhitelist.js + lucide-whitelist.json — ${names.length} icons`)

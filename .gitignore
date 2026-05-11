@@ -9,3 +9,5 @@ dist-electron/
 courses/*.jsx
 logs/
 public/lucide-react.min.js
+src/utils/lucide-whitelist.json
+src/utils/lucideWhitelist.js
