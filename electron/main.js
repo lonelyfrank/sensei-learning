@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, net } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const crypto = require('crypto')
 const archiver = require('archiver')
 const AdmZip = require('adm-zip')
 
@@ -136,6 +137,16 @@ function detectArtifactMeta(code) {
   return { type: 'sentiero', totalSteps }
 }
 
+const MAX_ARTIFACT_BYTES = 500 * 1024
+
+function contentHash(text) {
+  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 8)
+}
+
+function safeCourseId(slug, content) {
+  return `${slug}-${contentHash(content)}`
+}
+
 // Copia il file scelto nella cartella /courses e lo registra nel database.
 // mkdirSync con { recursive: true } garantisce che la cartella esista anche
 // al primo avvio o in ambienti in cui non è stata creata manualmente.
@@ -152,6 +163,9 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
     if (!raw.trim())
       return { success: false, error: 'Il file è vuoto' }
 
+    if (Buffer.byteLength(raw, 'utf-8') > MAX_ARTIFACT_BYTES)
+      return { success: false, error: 'File troppo grande — limite 500 KB' }
+
     const cleanCode                       = sanitizeContent(raw)
     const { valid, errors, warnings }     = validateContent(cleanCode)
 
@@ -160,10 +174,13 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
 
     const filename    = path.basename(filePath)
     const slug        = filename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
-    const courseId    = `${Date.now()}-${slug}`
+    const courseId    = safeCourseId(slug, cleanCode)
     const newFilename = `${courseId}.jsx`
     const coursesDir  = path.join(app.getPath('userData'), 'courses')
     const destPath    = path.join(coursesDir, newFilename)
+
+    if (!destPath.startsWith(coursesDir + path.sep))
+      return { success: false, error: 'Path non valido' }
 
     fs.mkdirSync(coursesDir, { recursive: true })
     fs.writeFileSync(destPath, cleanCode, 'utf-8')
@@ -332,8 +349,9 @@ ipcMain.handle('update-user', (event, name, avatar) => {
   return { success: true }
 })
 
-// Apre un URL nel browser di sistema
+// Apre un URL nel browser di sistema — solo https://
 ipcMain.handle('open-external', (event, url) => {
+  if (typeof url !== 'string' || !url.startsWith('https://')) return
   shell.openExternal(url)
 })
 
@@ -543,20 +561,22 @@ function sanitizeApostrophes(code) {
 
 ipcMain.handle('artifact:save', (event, { content, filename, name, icon, color }) => {
   try {
+    if (Buffer.byteLength(content, 'utf-8') > MAX_ARTIFACT_BYTES)
+      return { success: false, error: 'Artifact troppo grande — limite 500 KB' }
+
     const safeFilename = filename.endsWith('.jsx') ? filename : `${filename}.jsx`
     const slug         = safeFilename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
-    const courseId     = `${Date.now()}-${slug}`
+    const cleanContent = sanitizeApostrophes(stripMarkdownFence(content))
+    const courseId     = safeCourseId(slug, cleanContent)
     const newFilename  = `${courseId}.jsx`
     const coursesDir   = path.join(app.getPath('userData'), 'courses')
-    const cleanContent = sanitizeApostrophes(stripMarkdownFence(content))
     const savePath     = path.join(coursesDir, newFilename)
 
-    console.log('[artifact:save] path:', savePath)
-    console.log('[artifact:save] content preview:', cleanContent.slice(0, 200))
+    if (!savePath.startsWith(coursesDir + path.sep))
+      return { success: false, error: 'Path non valido' }
 
     fs.mkdirSync(coursesDir, { recursive: true })
     fs.writeFileSync(savePath, cleanContent, 'utf-8')
-    console.log('[artifact:save] file exists after write:', fs.existsSync(savePath))
 
     const meta      = detectArtifactMeta(content)
     const { type, totalSteps } = meta
@@ -792,16 +812,20 @@ ipcMain.handle('artifact:import-zip', async () => {
       const entry = zip.getEntry(origFilename)
       if (!entry) { skipped.push(origFilename); continue }
 
-      const raw = entry.getData().toString('utf-8')
+      const rawBuf = entry.getData()
+      if (rawBuf.length > MAX_ARTIFACT_BYTES) { skipped.push(origFilename); continue }
+      const raw = rawBuf.toString('utf-8')
       const cleanCode = sanitizeContent(raw)
 
       const slug      = origFilename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
-      const courseId  = `${Date.now()}-${slug}`
+      const courseId  = safeCourseId(slug, cleanCode)
       const newFilename = `${courseId}.jsx`
       const destPath  = path.join(coursesDir, newFilename)
 
-      // Skip se esiste già un file con lo stesso slug base
-      const existing = db.prepare("SELECT id FROM courses WHERE filename LIKE ?").get(`%-${slug}.jsx`)
+      if (!destPath.startsWith(coursesDir + path.sep)) { skipped.push(origFilename); continue }
+
+      // Skip se esiste già un file con lo stesso id (stesso contenuto)
+      const existing = db.prepare("SELECT id FROM courses WHERE id = ?").get(courseId)
       if (existing) { skipped.push(origFilename); continue }
 
       fs.writeFileSync(destPath, cleanCode, 'utf-8')
