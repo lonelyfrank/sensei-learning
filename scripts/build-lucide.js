@@ -17,6 +17,37 @@ if (!fs.existsSync(cjsPath)) {
 
 const cjs = fs.readFileSync(cjsPath, 'utf-8')
 
+// Legge e minifica il logo Sensei per usarlo come placeholder inline
+const senseiSvgRaw = fs.readFileSync(path.join(__dirname, '../src/assets/sensei-logo.svg'), 'utf-8')
+const senseiSvg = senseiSvgRaw
+  .replace(/<\?xml[^>]*\?>\s*/g, '')
+  .replace(/<!DOCTYPE[^>]*>\s*/g, '')
+  .replace(/<style>[^<]*<\/style>/gs, '')
+  .replace(/class="sensei-eye"/g, '')
+  .replace('fill="currentColor"', 'fill="__COLOR__"')
+  .replace(/\s+/g, ' ')
+  .trim()
+
+// Mappa icone rinominate in lucide-react v1.x (vecchio → nuovo).
+// Usata nel Proxy a runtime nell'iframe, indipendentemente dalla sanitizzazione.
+const deprecated = {
+  CheckCircle:'CircleCheck', CheckCircle2:'CircleCheckBig',
+  AlertCircle:'CircleAlert', AlertOctagon:'OctagonAlert', AlertTriangle:'TriangleAlert',
+  XCircle:'CircleX', XOctagon:'OctagonX', XSquare:'SquareX',
+  PlusCircle:'CirclePlus', PlusSquare:'SquarePlus',
+  MinusCircle:'CircleMinus', MinusSquare:'SquareMinus',
+  ArrowUpCircle:'CircleArrowUp', ArrowDownCircle:'CircleArrowDown',
+  ArrowLeftCircle:'CircleArrowLeft', ArrowRightCircle:'CircleArrowRight',
+  ChevronUpCircle:'CircleChevronUp', ChevronDownCircle:'CircleChevronDown',
+  ChevronLeftCircle:'CircleChevronLeft', ChevronRightCircle:'CircleChevronRight',
+  HelpCircle:'CircleHelp', DotCircle:'CircleDot',
+  Home:'House', Grid:'Grid3x3',
+  BarChart:'ChartColumn', BarChart2:'ChartColumnBig',
+  LineChart:'ChartLine', AreaChart:'ChartArea', PieChart:'ChartPie',
+  Loader2:'LoaderCircle', MoreHorizontal:'Ellipsis',
+  MoreVertical:'EllipsisVertical', ExternalLink:'SquareArrowOutUpRight',
+}
+
 const bundle = `/** lucide-react v${version} — IIFE bundle for Sensei iframe */
 (function() {
   var module = { exports: {} };
@@ -26,7 +57,26 @@ const bundle = `/** lucide-react v${version} — IIFE bundle for Sensei iframe *
     throw new Error('Sensei Lucide bundle: cannot require ' + m);
   };
 ${cjs}
-  window.LucideReact = module.exports;
+  var DEPRECATED = ${JSON.stringify(deprecated)};
+  var SENSEI_SVG = ${JSON.stringify(senseiSvg)};
+  function SenseiFallbackIcon(props) {
+    var size  = (props && props.size)  || 24;
+    var color = (props && props.color) || 'currentColor';
+    var src   = 'data:image/svg+xml,' + encodeURIComponent(SENSEI_SVG.replace('__COLOR__', color));
+    return window.React.createElement('img', {
+      src: src, width: size, height: size,
+      style: { opacity: 0.3, flexShrink: 0, display: 'inline-block' },
+      title: 'Icona non disponibile'
+    });
+  }
+  window.LucideReact = new Proxy(module.exports, {
+    get: function(target, prop) {
+      if (prop in target) return target[prop];
+      var alias = DEPRECATED[prop];
+      if (alias && alias in target) return target[alias];
+      return SenseiFallbackIcon;
+    }
+  });
 })();
 `
 

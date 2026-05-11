@@ -459,6 +459,69 @@ const LUCIDE_SET = (() => {
   } catch { return new Set() }
 })()
 
+// Mappa delle icone lucide-react rinominate in v1.x (vecchio \u2192 nuovo).
+// La riscrittura usa l'aliasing ESM: { CircleCheck as CheckCircle }
+// cos\u00ec il JSX dell'artifact non va modificato.
+const LUCIDE_DEPRECATED = {
+  // Cerchi
+  CheckCircle:         'CircleCheck',
+  CheckCircle2:        'CircleCheckBig',
+  AlertCircle:         'CircleAlert',
+  AlertOctagon:        'OctagonAlert',
+  XCircle:             'CircleX',
+  XOctagon:            'OctagonX',
+  PlusCircle:          'CirclePlus',
+  MinusCircle:         'CircleMinus',
+  ArrowUpCircle:       'CircleArrowUp',
+  ArrowDownCircle:     'CircleArrowDown',
+  ArrowLeftCircle:     'CircleArrowLeft',
+  ArrowRightCircle:    'CircleArrowRight',
+  ChevronUpCircle:     'CircleChevronUp',
+  ChevronDownCircle:   'CircleChevronDown',
+  ChevronLeftCircle:   'CircleChevronLeft',
+  ChevronRightCircle:  'CircleChevronRight',
+  HelpCircle:          'CircleHelp',
+  DotCircle:           'CircleDot',
+  // Quadrati
+  XSquare:             'SquareX',
+  PlusSquare:          'SquarePlus',
+  MinusSquare:         'SquareMinus',
+  // Triangoli / poligoni
+  AlertTriangle:       'TriangleAlert',
+  // Layout / navigazione
+  Home:                'House',
+  Grid:                'Grid3x3',
+  MoreHorizontal:      'Ellipsis',
+  MoreVertical:        'EllipsisVertical',
+  ExternalLink:        'SquareArrowOutUpRight',
+  // Grafici
+  BarChart:            'ChartColumn',
+  BarChart2:           'ChartColumnBig',
+  LineChart:           'ChartLine',
+  AreaChart:           'ChartArea',
+  PieChart:            'ChartPie',
+  // Loader
+  Loader2:             'LoaderCircle',
+}
+
+function rewriteDeprecatedLucideIcons(code) {
+  return code.replace(
+    /^(import\s+\{)([^}]+)(\}\s+from\s+['"]lucide-react['"])/m,
+    (_, open, body, close) => {
+      const rewritten = body.split(',').map(entry => {
+        const [name, alias] = entry.split(/\s+as\s+/)
+        const trimmed = name.trim()
+        const newName = LUCIDE_DEPRECATED[trimmed]
+        if (!newName) return entry
+        return alias
+          ? ` ${newName} as ${alias.trim()}`
+          : ` ${newName} as ${trimmed}`
+      })
+      return `${open}${rewritten.join(',')}${close}`
+    }
+  )
+}
+
 function sanitizeContent(code) {
   let s = code
   s = s.replace(/^[\ufeff\u200b\u200c\u200d\u2060\ufffe]+/, '')
@@ -476,6 +539,7 @@ function sanitizeContent(code) {
   }
   s = s.replace(/[\u2018\u2019]/g, "'")
   s = s.replace(/[\u201c\u201d]/g, '"')
+  s = rewriteDeprecatedLucideIcons(s)
   return s.trim()
 }
 
@@ -504,7 +568,7 @@ function validateContent(content) {
       const icons = lucideImport[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)
       const unknown = icons.filter(name => !LUCIDE_SET.has(name))
       if (unknown.length > 0)
-        errors.push(`Icone non disponibili: ${unknown.join(', ')}. Rimuovile o sostituiscile.`)
+        warnings.push(`Icone non riconosciute: ${unknown.join(', ')} — verranno omesse a runtime`)
     }
   }
 

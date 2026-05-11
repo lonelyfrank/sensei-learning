@@ -16,6 +16,7 @@ import CreateLeafletAI from './create/leaflet-ai/CreateLeafletAI.jsx'
 import Toast from './components/Toast.jsx'
 import { useToast } from './hooks/useToast.js'
 import SenseiLogo from './assets/sensei-logo.svg?react'
+import { Route, BookOpen, Sparkles, Check } from 'lucide-react'
 
 // Palette di colori assegnati ai corsi in ordine ciclico quando l'artifact
 // non specifica un colore proprio.
@@ -422,56 +423,330 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
   )
 }
 
-// ─── Schermata di benvenuto (primo avvio) ─────────────────────────────────────
-// Mostrata una sola volta al primo avvio grazie al flag `welcomed` nel DB.
-// Introduce i concetti chiave di Sensei con due card descrittive.
-function WelcomeDialog({ onDismiss, onImport }) {
+// ─── Onboarding primo avvio ───────────────────────────────────────────────────
+
+const ONBOARDING_STARS = [
+  { x:   0, y: -56, size: 6, anim: 'twinkle', dur: 2.8, delay: 0.3 },
+  { x: -58, y:   0, size: 5, anim: 'twinkle', dur: 3.3, delay: 1.7 },
+  { x:  56, y:   2, size: 5, anim: 'twinkle', dur: 2.5, delay: 0.8 },
+  { x:   2, y:  56, size: 5, anim: 'twinkle', dur: 3.1, delay: 2.4 },
+  { x: -42, y: -42, size: 4, anim: 'twinkle', dur: 2.7, delay: 1.2 },
+  { x:  44, y: -42, size: 4, anim: 'twinkle', dur: 3.4, delay: 0.5 },
+  { x: -42, y:  40, size: 3, anim: 'twinkle', dur: 2.4, delay: 2.9 },
+  { x:  42, y:  42, size: 3, anim: 'twinkle', dur: 3.0, delay: 0.1 },
+  { x: -36, y: -36, size: 3, anim: 'driftNW', dur: 3.8, delay: 0.0 },
+  { x:  36, y: -38, size: 3, anim: 'driftNE', dur: 4.2, delay: 1.1 },
+  { x:  42, y:  30, size: 3, anim: 'driftSE', dur: 4.0, delay: 0.4 },
+  { x: -44, y:  28, size: 3, anim: 'driftSW', dur: 3.9, delay: 2.3 },
+  { x:  -8, y: -52, size: 2, anim: 'driftN',  dur: 3.6, delay: 2.0 },
+  { x:  52, y: -14, size: 2, anim: 'driftE',  dur: 3.7, delay: 0.9 },
+]
+
+function StarDot({ s }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '40px 40px 32px', width: 480, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ position: 'absolute', left: `calc(50% + ${s.x}px)`, top: `calc(50% + ${s.y}px)`, transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+      <div style={{ animation: `${s.anim} ${s.dur}s ease-in-out ${s.delay}s infinite`, color: 'var(--text-primary)' }}>
+        <svg width={s.size} height={s.size} viewBox="-1 -1 2 2">
+          <path d="M0 -1 L0.25 -0.25 L1 0 L0.25 0.25 L0 1 L-0.25 0.25 L-1 0 L-0.25 -0.25Z" fill="currentColor" />
+        </svg>
+      </div>
+    </div>
+  )
+}
 
-        <div style={{ width: 52, height: 52, marginBottom: 20, color: 'var(--logo-color)' }}>
-          <SenseiLogo width={52} height={52} />
-        </div>
-
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', textAlign: 'center' }}>
-          Benvenuto in Sensei
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 28px', textAlign: 'center', lineHeight: 1.5 }}>
-          La tua piattaforma di apprendimento personale.<br />
-          Carica artifact JSX interattivi generati con Claude AI.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%', marginBottom: 28 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 14px' }}>
-            <div style={{ fontSize: 18, marginBottom: 8 }}>🧭</div>
-            <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Sentieri</p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Percorsi progressivi con step, XP e progressi tracciati nel tempo.</p>
-          </div>
-          <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 14px' }}>
-            <div style={{ fontSize: 18, marginBottom: 8 }}>📄</div>
-            <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Leaflet</p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Documenti interattivi da consultare in sessione singola.</p>
+function OnboardingStepWelcome() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ position: 'relative', width: 150, height: 150, marginBottom: 20, flexShrink: 0 }}>
+        {ONBOARDING_STARS.map((s, i) => <StarDot key={i} s={s} />)}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}>
+          <div style={{ animation: 'senseiTravel 7s linear infinite' }}>
+            <div className="sensei-blink" style={{ color: 'var(--logo-color)', animation: 'senseiGlow 7s linear infinite' }}>
+              <SenseiLogo width={72} height={72} />
+            </div>
           </div>
         </div>
+      </div>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px', textAlign: 'center', letterSpacing: '-0.3px' }}>
+        Benvenuto in Sensei
+      </h1>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, textAlign: 'center', lineHeight: 1.65, maxWidth: 320 }}>
+        La tua piattaforma di apprendimento personale.<br />
+        Artifact interattivi generati con Claude AI, su misura per te.
+      </p>
+    </div>
+  )
+}
 
-        <button
-          onClick={onImport}
-          autoFocus
-          style={{ width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', marginBottom: 10, transition: 'opacity 0.15s', cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        >
-          Importa il tuo primo artifact
-        </button>
-        <button
-          onClick={onDismiss}
-          style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
-        >
-          Inizia a esplorare
-        </button>
+function SentieriSlideSteps() {
+  const steps = [
+    { label: 'Introduzione ai concetti', done: true },
+    { label: 'Esercizi pratici guidati', done: true },
+    { label: 'Progetto finale', active: true },
+    { label: 'Quiz e riepilogo', done: false },
+  ]
+  return (
+    <div style={{ width: '100%', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+      {steps.map((s, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < steps.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+          <div style={{ width: 20, height: 20, borderRadius: 10, flexShrink: 0, background: s.done ? '#378ADD' : s.active ? 'transparent' : 'var(--bg-tertiary)', border: s.active ? '1.5px solid #378ADD' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {s.done && <Check size={11} color="#fff" strokeWidth={3} />}
+            {s.active && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#378ADD' }} />}
+          </div>
+          <span style={{ fontSize: 12, color: s.done ? 'var(--text-tertiary)' : s.active ? 'var(--text-primary)' : 'var(--text-tertiary)', textDecoration: s.done ? 'line-through' : 'none', fontWeight: s.active ? 500 : 400 }}>
+            {s.label}
+          </span>
+          {s.active && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#378ADD', fontWeight: 500 }}>in corso</span>}
+        </div>
+      ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+        <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+          <div style={{ width: '50%', height: '100%', background: '#378ADD', borderRadius: 2 }} />
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>2 / 4 step</span>
+      </div>
+    </div>
+  )
+}
+
+function SentieriSlideXP() {
+  const [xp, setXp] = useState(0)
+  useEffect(() => {
+    const target = 120, frames = 45
+    let frame = 0
+    const t = setInterval(() => {
+      frame++
+      setXp(Math.round((frame / frames) * target))
+      if (frame >= frames) clearInterval(t)
+    }, 18)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ textAlign: 'center', marginBottom: 14 }}>
+        <div style={{ fontSize: 46, fontWeight: 800, color: '#378ADD', lineHeight: 1, letterSpacing: '-2px' }}>{xp}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>XP guadagnati</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+        {[
+          { val: '7', label: '🔥 Streak' },
+          { val: '3',  label: 'Sentieri' },
+          { val: '12', label: 'Step fatti' },
+        ].map(({ val, label }) => (
+          <div key={label} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '10px 6px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{val}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 3 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>Livello 2</span>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{xp} / 200 XP</span>
+        </div>
+        <div style={{ height: 5, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+          <div style={{ width: `${(xp / 200) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #378ADD, #7F77DD)', borderRadius: 3, transition: 'width 0.02s linear' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OnboardingStepSentieri() {
+  const [slide, setSlide]       = useState(0)
+  const [slideOp, setSlideOp]   = useState(1)
+  const timerRef                = useRef(null)
+
+  const goSlide = (next) => {
+    setSlideOp(0)
+    setTimeout(() => { setSlide(next); setSlideOp(1) }, 160)
+  }
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => goSlide((slide + 1) % 2), 3200)
+    return () => clearTimeout(timerRef.current)
+  }, [slide])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#378ADD18', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+        <Route size={22} color="#378ADD" />
+      </div>
+      <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', textAlign: 'center' }}>Sentieri di apprendimento</h2>
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', textAlign: 'center', lineHeight: 1.6 }}>
+        {slide === 0 ? 'Percorsi step-by-step con progressi tracciati in tempo reale.' : 'Guadagna XP completando step e costruisci la tua streak.'}
+      </p>
+      <div style={{ opacity: slideOp, transition: 'opacity 0.16s ease', width: '100%', minHeight: 148 }}>
+        {slide === 0 ? <SentieriSlideSteps /> : <SentieriSlideXP />}
+      </div>
+    </div>
+  )
+}
+
+function OnboardingStepLeaflet() {
+  const cards = [
+    {
+      title: 'React Hooks',
+      color: '#378ADD',
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {['useState', 'useEffect', 'useRef'].map(h => (
+            <div key={h} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 4, height: 4, borderRadius: 2, background: '#378ADD', flexShrink: 0 }} />
+              <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{h}</div>
+            </div>
+          ))}
+          <div style={{ marginTop: 4, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, background: '#378ADD18', color: '#378ADD' }}>hook</div>
+            <div style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, background: '#378ADD18', color: '#378ADD' }}>react</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Git Cheatsheet',
+      color: '#1D9E75',
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {['git commit -m', 'git push origin', 'git pull --rebase'].map(cmd => (
+            <div key={cmd} style={{ fontSize: 8, padding: '3px 6px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cmd}</div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: 'CSS Grid',
+      color: '#7F77DD',
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+            {['#7F77DD44','#7F77DD22','#7F77DD33','#7F77DD22'].map((bg, i) => (
+              <div key={i} style={{ height: 16, borderRadius: 4, background: bg }} />
+            ))}
+          </div>
+          <div style={{ height: 14, borderRadius: 4, background: '#7F77DD22' }} />
+          <div style={{ fontSize: 8, padding: '2px 5px', borderRadius: 3, background: '#7F77DD18', color: '#7F77DD', alignSelf: 'flex-start' }}>layout</div>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#1D9E7518', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+        <BookOpen size={22} color="#1D9E75" />
+      </div>
+      <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', textAlign: 'center' }}>Leaflet interattivi</h2>
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 14px', textAlign: 'center', lineHeight: 1.6 }}>
+        Documenti ricchi e consultabili al volo. Cheat sheet, reference e appunti visivi.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: '100%' }}>
+        {cards.map(card => (
+          <div key={card.title} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderTop: `2px solid ${card.color}`, borderRadius: 'var(--radius-md)', padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: card.color }}>{card.title}</div>
+            {card.body}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OnboardingStepStart({ onImport, onDismiss }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#7F77DD18', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+        <Sparkles size={22} color="#7F77DD" />
+      </div>
+      <h2 style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', textAlign: 'center' }}>Pronto per iniziare?</h2>
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 22px', textAlign: 'center', lineHeight: 1.6 }}>
+        Importa un artifact JSX esistente oppure creane uno nuovo direttamente con Claude AI dalla sezione Crea.
+      </p>
+      <button
+        onClick={onImport}
+        autoFocus
+        style={{ width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', marginBottom: 8, transition: 'opacity 0.15s', cursor: 'pointer' }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+      >
+        Importa il tuo primo artifact
+      </button>
+      <button
+        onClick={onDismiss}
+        style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
+      >
+        Esplora da solo
+      </button>
+    </div>
+  )
+}
+
+const TOTAL_ONBOARDING = 4
+
+function WelcomeDialog({ onDismiss, onImport }) {
+  const [step, setStep]       = useState(0)
+  const [opacity, setOpacity] = useState(1)
+  const isLast = step === TOTAL_ONBOARDING - 1
+
+  const goTo = (next) => {
+    setOpacity(0)
+    setTimeout(() => { setStep(next); setOpacity(1) }, 160)
+  }
+
+  const handleNext = () => { if (!isLast) goTo(step + 1) }
+
+  useEffect(() => {
+    const handle = (e) => { if (e.key === 'ArrowRight' && !isLast) handleNext() }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [step])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '32px 36px 28px', width: 460, display: 'flex', flexDirection: 'column', alignItems: 'center', boxSizing: 'border-box' }}>
+
+        {/* Contenuto animato */}
+        <div style={{ opacity, transition: 'opacity 0.16s ease', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 310 }}>
+          {step === 0 && <OnboardingStepWelcome />}
+          {step === 1 && <OnboardingStepSentieri />}
+          {step === 2 && <OnboardingStepLeaflet />}
+          {step === 3 && <OnboardingStepStart onImport={onImport} onDismiss={onDismiss} />}
+        </div>
+
+        {/* Dot indicator */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 20, alignItems: 'center' }}>
+          {Array.from({ length: TOTAL_ONBOARDING }, (_, i) => (
+            <div key={i} onClick={() => goTo(i)}
+              style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? '#378ADD' : 'var(--border)', transition: 'all 0.22s ease', cursor: 'pointer' }}
+            />
+          ))}
+        </div>
+
+        {/* Bottoni navigazione */}
+        {!isLast && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 16, width: '100%' }}>
+            <button
+              onClick={handleNext}
+              autoFocus={step === 0}
+              style={{ width: '100%', padding: '10px 0', fontSize: 13, fontWeight: 500, color: '#fff', background: '#378ADD', border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              Avanti
+            </button>
+            <button
+              onClick={onDismiss}
+              style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px 8px' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-tertiary)'}
+            >
+              Salta
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

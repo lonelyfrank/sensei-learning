@@ -4,6 +4,24 @@ const ALLOWED_IMPORTS = ['react', 'lucide-react']
 const VALID_COMPLETION_RULES = ['all-steps', 'any-step', 'manual']
 const LUCIDE_SET = new Set(LUCIDE_WHITELIST)
 
+const LUCIDE_DEPRECATED = {
+  CheckCircle: 'CircleCheck', CheckCircle2: 'CircleCheckBig',
+  AlertCircle: 'CircleAlert', AlertOctagon: 'OctagonAlert', AlertTriangle: 'TriangleAlert',
+  XCircle: 'CircleX', XOctagon: 'OctagonX', XSquare: 'SquareX',
+  PlusCircle: 'CirclePlus', PlusSquare: 'SquarePlus',
+  MinusCircle: 'CircleMinus', MinusSquare: 'SquareMinus',
+  ArrowUpCircle: 'CircleArrowUp', ArrowDownCircle: 'CircleArrowDown',
+  ArrowLeftCircle: 'CircleArrowLeft', ArrowRightCircle: 'CircleArrowRight',
+  ChevronUpCircle: 'CircleChevronUp', ChevronDownCircle: 'CircleChevronDown',
+  ChevronLeftCircle: 'CircleChevronLeft', ChevronRightCircle: 'CircleChevronRight',
+  HelpCircle: 'CircleHelp', DotCircle: 'CircleDot',
+  Home: 'House', Grid: 'Grid3x3',
+  BarChart: 'ChartColumn', BarChart2: 'ChartColumnBig',
+  LineChart: 'ChartLine', AreaChart: 'ChartArea', PieChart: 'ChartPie',
+  Loader2: 'LoaderCircle', MoreHorizontal: 'Ellipsis',
+  MoreVertical: 'EllipsisVertical', ExternalLink: 'SquareArrowOutUpRight',
+}
+
 export function validateArtifact(content) {
   const errors   = []
   const warnings = []
@@ -27,9 +45,10 @@ export function validateArtifact(content) {
   const lucideImport = content.match(/^import\s+\{([^}]+)\}\s+from\s+['"]lucide-react['"]/m)
   if (lucideImport) {
     const icons = lucideImport[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)
-    const unknown = icons.filter(name => !LUCIDE_SET.has(name))
+    const resolved = icons.map(name => LUCIDE_DEPRECATED[name] ?? name)
+    const unknown = resolved.filter(name => !LUCIDE_SET.has(name))
     if (unknown.length > 0)
-      errors.push(`Icone non disponibili: ${unknown.join(', ')}. Rimuovile o sostituiscile.`)
+      warnings.push(`Icone non riconosciute: ${unknown.join(', ')} — verranno omesse a runtime`)
   }
 
   const lines = content.trimEnd().split('\n')
