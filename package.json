@@ -1,6 +1,6 @@
 {
   "name": "sensei-learning",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local learning platform for Claude artifacts",
   "main": "electron/main.js",
   "author": "lonelyfrank",

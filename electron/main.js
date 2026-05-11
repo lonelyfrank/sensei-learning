@@ -397,10 +397,8 @@ ipcMain.handle('anthropic:generate', async (event, { description, systemPrompt }
 
     const apiKey = fs.readFileSync(keyPath(), 'utf-8').trim()
     const keyPreview = apiKey.slice(0, 14) + '…'
-    console.log('[anthropic:generate] key prefix:', keyPreview, '| length:', apiKey.length)
 
     if (!apiKey.startsWith('sk-ant-')) {
-      console.error('[anthropic:generate] key format invalid:', keyPreview)
       return { success: false, error: `Formato chiave non valido (${keyPreview}). La chiave deve iniziare con sk-ant-` }
     }
 

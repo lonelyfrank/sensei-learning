@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import SenseiLogo from '../assets/sensei-logo.svg?react'
 import SenseiGame from './SenseiGame.jsx'
 
@@ -98,10 +98,15 @@ const EXTRA_STARS = [
 ]
 
 function VersionSection() {
-  const [pulseKey, setPulseKey] = useState(0)
+  const [pulseKey, setPulseKey]     = useState(0)
   const [clickCount, setClickCount] = useState(0)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded]     = useState(false)
   const [gameActive, setGameActive] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    window.sensei.getAppVersion().then(v => setAppVersion(v))
+  }, [])
 
   const handleLogoClick = () => {
     setPulseKey(k => k + 1)
@@ -174,7 +179,7 @@ function VersionSection() {
           letterSpacing: '0.12em', textTransform: 'uppercase',
           color: 'var(--text-tertiary)', userSelect: 'none',
         }}>
-          v: beta
+          v{appVersion ? `: ${appVersion}` : ': …'}
         </p>
       )}
 
