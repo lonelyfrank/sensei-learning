@@ -1,24 +1,24 @@
 const ALLOWED_IMPORTS = ['react', 'lucide-react']
+const VALID_COMPLETION_RULES = ['all-steps', 'any-step', 'manual']
 
 export function validateArtifact(content) {
   const errors   = []
   const warnings = []
 
-  // ── Errori bloccanti ─────────────────────────────────────────────────────────
+  const isNewFormat = /export\s+default\s+\{/.test(content) && /\bcomponent\s*:/.test(content)
+  const hasExportDefault = /export\s+default\s+/m.test(content)
 
-  if (!/export\s+default\s+/m.test(content))
+  if (!hasExportDefault) {
     errors.push("Manca export default — il componente principale non è esportato")
+    return { valid: false, errors, warnings }
+  }
+
+  // ── Check comuni a entrambi i formati ────────────────────────────────────────
 
   const importMatches = [...content.matchAll(/^import\s+.+\s+from\s+['"]([^'"]+)['"]/gm)]
   const forbidden = importMatches.map(m => m[1]).filter(src => !ALLOWED_IMPORTS.includes(src))
   if (forbidden.length > 0)
     errors.push(`Import non consentiti: ${forbidden.join(', ')} — usa solo react e lucide-react`)
-
-  if (/new\s+Map\s*\(/.test(content))
-    errors.push("Uso di new Map() non consentito — causa conflitti con le icone Lucide")
-
-  if (/new\s+Set\s*\(/.test(content))
-    errors.push("Uso di new Set() non consentito — causa conflitti con le icone Lucide")
 
   const lines = content.trimEnd().split('\n')
   let lastMeaningful = ''
@@ -29,13 +29,30 @@ export function validateArtifact(content) {
   if (!lastMeaningful.endsWith('}'))
     errors.push("Il file sembra troncato — l'ultima istruzione significativa non termina con }")
 
-  // ── Warning non bloccanti ────────────────────────────────────────────────────
-
-  if (!/export\s+const\s+SENSEI_TYPE\s*=/.test(content))
-    warnings.push("SENSEI_TYPE non trovato — Sensei potrebbe non riconoscere il tipo dell'artifact")
-
-  if (!/export\s+const\s+SENSEI_STEPS\s*=/.test(content))
-    warnings.push("SENSEI_STEPS non trovato — il conteggio degli step potrebbe non essere corretto")
+  if (isNewFormat) {
+    // ── Validazione Sensei Artifact Standard ──────────────────────────────────
+    if (!/meta\s*:\s*\{/.test(content))
+      errors.push("meta: blocco mancante — il Sensei Artifact Standard richiede un oggetto meta")
+    if (!/title\s*:\s*["'][^"']+["']/.test(content))
+      errors.push("meta.title mancante o non è una stringa non vuota")
+    if (!/type\s*:\s*["'](sentiero|leaflet)["']/.test(content))
+      errors.push("meta.type deve essere 'sentiero' o 'leaflet'")
+    if (!/version\s*:\s*["'][^"']+["']/.test(content))
+      errors.push("meta.version mancante o non è una stringa")
+    if (!/\bcomponent\s*:\s*\w/.test(content))
+      errors.push("component mancante — deve referenziare il componente React principale")
+    if (!/\bxp\s*:\s*\d+/.test(content))
+      errors.push("gamification.xp mancante o non è un numero")
+    if (!VALID_COMPLETION_RULES.some(r => content.includes(`"${r}"`) || content.includes(`'${r}'`)))
+      errors.push("gamification.completionRule deve essere 'all-steps', 'any-step' o 'manual'")
+  } else {
+    // ── Formato legacy — warning non bloccante ────────────────────────────────
+    warnings.push("Formato legacy — considera la migrazione al Sensei Artifact Standard")
+    if (!/export\s+const\s+SENSEI_TYPE\s*=/.test(content))
+      warnings.push("SENSEI_TYPE non trovato — Sensei potrebbe non riconoscere il tipo dell'artifact")
+    if (!/export\s+const\s+SENSEI_STEPS\s*=/.test(content))
+      warnings.push("SENSEI_STEPS non trovato — il conteggio degli step potrebbe non essere corretto")
+  }
 
   return { valid: errors.length === 0, errors, warnings }
 }

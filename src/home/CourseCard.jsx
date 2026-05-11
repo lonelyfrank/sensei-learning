@@ -113,7 +113,33 @@ function CourseCard({ course, view, onClick, isCompleted, onRemove, isLeaflet, s
             {course.progress > 0 ? 'Aperto' : 'Non ancora aperto'}
           </p>
         )}
+
+        <ArtifactBadges course={course} />
       </div>
+    </div>
+  )
+}
+
+function ArtifactBadges({ course }) {
+  const tags = course.tags ? (() => { try { return JSON.parse(course.tags) } catch { return [] } })() : []
+  if (!tags.length && !course.estimated_minutes && !course.xp) return null
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+      {tags.map(tag => (
+        <span key={tag} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+          {tag}
+        </span>
+      ))}
+      {course.estimated_minutes ? (
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>
+          ~{course.estimated_minutes} min
+        </span>
+      ) : null}
+      {course.xp ? (
+        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, background: '#F59E0B22', color: '#F59E0B', fontWeight: 500 }}>
+          +{course.xp} XP
+        </span>
+      ) : null}
     </div>
   )
 }

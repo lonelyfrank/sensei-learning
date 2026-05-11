@@ -54,6 +54,47 @@ ipcMain.handle('open-file-dialog', async () => {
 
 function detectArtifactMeta(code) {
 
+  // ── LIVELLO 0: Sensei Artifact Standard ──────────────────────────────────────
+  if (/export\s+default\s+\{/.test(code) && /\bcomponent\s*:/.test(code)) {
+    const typeMatch       = code.match(/type\s*:\s*['"](\w+)['"]/)
+    const titleMatch      = code.match(/title\s*:\s*['"]([^'"]+)['"]/)
+    const versionMatch    = code.match(/version\s*:\s*['"]([^'"]+)['"]/)
+    const descMatch       = code.match(/description\s*:\s*['"]([^'"]+)['"]/)
+    const minutesMatch    = code.match(/estimatedMinutes\s*:\s*(\d+)/)
+    const xpMatch         = code.match(/\bxp\s*:\s*(\d+)/)
+    const ruleMatch       = code.match(/completionRule\s*:\s*['"]([^'"]+)['"]/)
+    const tagsMatch       = code.match(/tags\s*:\s*\[([^\]]*)\]/)
+
+    const type = typeMatch?.[1] === 'leaflet' ? 'leaflet' : 'sentiero'
+
+    const stepsMatch = code.match(/SENSEI_STEPS\s*=\s*(\d+)/)
+    let totalSteps = stepsMatch ? parseInt(stepsMatch[1]) : 0
+    if (!totalSteps) {
+      const ids = [...code.matchAll(/\bid\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
+      totalSteps = ids.length > 0 ? Math.max(...ids) : 0
+    }
+
+    let tags = null
+    if (tagsMatch) {
+      try {
+        const parsed = tagsMatch[1].replace(/['"]/g, '').split(',').map(t => t.trim()).filter(Boolean)
+        if (parsed.length > 0) tags = JSON.stringify(parsed)
+      } catch (_) {}
+    }
+
+    return {
+      type,
+      totalSteps,
+      title:            titleMatch?.[1]   || null,
+      version:          versionMatch?.[1] || null,
+      description:      descMatch?.[1]    || null,
+      estimatedMinutes: minutesMatch      ? parseInt(minutesMatch[1]) : null,
+      xp:               xpMatch           ? parseInt(xpMatch[1])      : null,
+      completionRule:   ruleMatch?.[1]    || null,
+      tags,
+    }
+  }
+
   // ── LIVELLO 1: variabili esplicite Sensei ──
   const typeMatch = code.match(/export\s+const\s+SENSEI_TYPE\s*=\s*['"](\w+)['"]/)
   const stepsMatch = code.match(/export\s+const\s+SENSEI_STEPS\s*=\s*(\d+)/)
@@ -65,47 +106,31 @@ function detectArtifactMeta(code) {
     }
   }
 
-  // ── LIVELLO 2: array named — cerca array di oggetti comuni ──
-  // Supporta: STEPS, DAYS, LESSONS, CHAPTERS, RECIPES, INGREDIENTS, MODULES, TASKS
-  // Cerca il nome dell'array per contarne gli elementi
+  // ── LIVELLO 2: array named ──
   const namedArrayMatch = code.match(/const\s+(STEPS|DAYS|LESSONS|CHAPTERS|MODULES|TASKS|RECIPES|steps|days|lessons)\s*=\s*\[/)
   if (namedArrayMatch) {
-    // Conta le occorrenze di { id: N } o { day: N } dentro l'array
-    const idMatches = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
+    const idMatches  = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
     const dayMatches = [...code.matchAll(/\bday\s*:\s*(\d+)/g)].map(m => parseInt(m[1]))
-    const allNums = [...idMatches, ...dayMatches].filter(n => !isNaN(n))
+    const allNums    = [...idMatches, ...dayMatches].filter(n => !isNaN(n))
     const totalSteps = allNums.length > 0 ? Math.max(...allNums) : allNums.length
-
-    // Inferisce il tipo dal nome dell'array
-    const arrName = namedArrayMatch[1].toLowerCase()
-    const isLeafletArray = ['recipes', 'ingredients'].includes(arrName)
-    const isSentieroArray = ['days', 'lessons', 'chapters', 'modules'].includes(arrName)
-
-    if (isLeafletArray) return { type: 'leaflet', totalSteps }
-    if (isSentieroArray) return { type: 'sentiero', totalSteps }
-    // STEPS e steps sono ambigui — continua con keywords
+    const arrName    = namedArrayMatch[1].toLowerCase()
+    if (['recipes', 'ingredients'].includes(arrName)) return { type: 'leaflet', totalSteps }
+    if (['days', 'lessons', 'chapters', 'modules'].includes(arrName)) return { type: 'sentiero', totalSteps }
   }
 
-  // ── LIVELLO 3: keywords nel testo ──
-  const codeLower = code.toLowerCase()
+  // ── LIVELLO 3: keywords ──
+  const codeLower       = code.toLowerCase()
+  const leafletScore    = ['ricetta', 'recipe', 'ingredienti', 'ingredients', 'configuraz', 'guida rapida', 'quick guide', 'scheda', 'reference'].filter(k => codeLower.includes(k)).length
+  const sentieroScore   = ['giorni', 'settimane', 'programma', 'percorso', 'challenge', 'curriculum', 'formazione', 'corso'].filter(k => codeLower.includes(k)).length
 
-  const leafletKeywords = ['ricetta', 'recipe', 'ingredienti', 'ingredients', 'configuraz', 'guida rapida', 'quick guide', 'scheda', 'reference']
-  const sentieroKeywords = ['giorni', 'settimane', 'programma', 'percorso', 'challenge', 'curriculum', 'formazione', 'corso']
-
-  const leafletScore = leafletKeywords.filter(k => codeLower.includes(k)).length
-  const sentieroScore = sentieroKeywords.filter(k => codeLower.includes(k)).length
-
-  // ── LIVELLO 4: regex id/day — conteggio step ──
-  const stepIds = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
-  const dayNums = [...code.matchAll(/\bday\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
-  const allNums = [...stepIds, ...dayNums]
+  // ── LIVELLO 4: conteggio id/day ──
+  const stepIds  = [...code.matchAll(/[\[,{]\s*\n?\s*id\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
+  const dayNums  = [...code.matchAll(/\bday\s*:\s*(\d+)/g)].map(m => parseInt(m[1])).filter(n => !isNaN(n))
+  const allNums  = [...stepIds, ...dayNums]
   const totalSteps = allNums.length > 0 ? Math.max(...allNums) : 30
 
-  // Determina il tipo in base al punteggio keywords
   if (leafletScore > sentieroScore) return { type: 'leaflet', totalSteps }
   if (sentieroScore > leafletScore) return { type: 'sentiero', totalSteps }
-
-  // ── LIVELLO 5: default ──
   return { type: 'sentiero', totalSteps }
 }
 
@@ -131,21 +156,27 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
     if (!valid)
       return { success: false, errors }
 
-    const filename   = path.basename(filePath)
-    const courseId   = filename.replace('.jsx', '')
-    const coursesDir = path.join(app.getAppPath(), 'courses')
-    const destPath   = path.join(coursesDir, filename)
+    const filename    = path.basename(filePath)
+    const slug        = filename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const courseId    = `${Date.now()}-${slug}`
+    const newFilename = `${courseId}.jsx`
+    const coursesDir  = path.join(app.getPath('userData'), 'courses')
+    const destPath    = path.join(coursesDir, newFilename)
 
     fs.mkdirSync(coursesDir, { recursive: true })
     fs.writeFileSync(destPath, cleanCode, 'utf-8')
 
-    const { type, totalSteps } = detectArtifactMeta(cleanCode)
-    const name = customName || courseId
+    const meta = detectArtifactMeta(cleanCode)
+    const { type, totalSteps } = meta
+    const name = customName || (meta.title) || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
     db.prepare(`
-      INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(courseId, name, filename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
+      INSERT OR REPLACE INTO courses
+        (id, name, filename, total_days, icon, color, type, tags, estimated_minutes, xp, completion_rule, version, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(courseId, name, newFilename, totalSteps, icon || 'BookOpen', color || '#378ADD', type,
+      meta.tags || null, meta.estimatedMinutes || null, meta.xp || null,
+      meta.completionRule || null, meta.version || null, meta.description || null)
 
     return { success: true, courseId, totalSteps, type, warnings: warnings.length ? warnings : undefined }
   } catch (err) {
@@ -160,14 +191,16 @@ ipcMain.handle('get-courses', () => {
 
 // Legge il contenuto raw di un file artifact
 ipcMain.handle('read-course-file', (event, filename) => {
-  const filePath = path.join(app.getAppPath(), 'courses', filename)
+  const filePath = path.join(app.getPath('userData'), 'courses', filename)
   if (!fs.existsSync(filePath)) return null
   return fs.readFileSync(filePath, 'utf-8')
 })
 
 // Serve il bundle UMD di lucide-react locale
 ipcMain.handle('get-lucide-bundle', () => {
-  const filePath = path.join(app.getAppPath(), 'node_modules/lucide-react/dist/umd/lucide-react.min.js')
+  const filePath = app.isPackaged
+    ? path.join(process.resourcesPath, 'lucide-react.min.js')
+    : path.join(app.getAppPath(), 'node_modules/lucide-react/dist/umd/lucide-react.min.js')
   if (!fs.existsSync(filePath)) return null
   return fs.readFileSync(filePath, 'utf-8')
 })
@@ -191,7 +224,7 @@ ipcMain.handle('get-progress', (event, courseId) => {
 
 // Rimuove un artifact dal database e cancella il file dalla cartella courses
 ipcMain.handle('remove-course', (event, courseId, filename) => {
-  const filePath = path.join(app.getAppPath(), 'courses', filename)
+  const filePath = path.join(app.getPath('userData'), 'courses', filename)
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
   db.prepare('DELETE FROM progress WHERE course_id = ?').run(courseId)
   db.prepare('DELETE FROM course_storage WHERE course_id = ?').run(courseId)
@@ -404,12 +437,15 @@ function sanitizeContent(code) {
   let s = code
   s = s.replace(/^[\ufeff\u200b\u200c\u200d\u2060\ufffe]+/, '')
   s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const fenceStart = s.indexOf('```')
-  if (fenceStart !== -1) {
-    const afterLang = s.indexOf('\n', fenceStart)
-    if (afterLang !== -1) {
-      const lastFence = s.lastIndexOf('\n```')
-      if (lastFence > afterLang) s = s.slice(afterLang + 1, lastFence)
+  const isNewFormat = /export\s+default\s+\{/.test(s) && /\bcomponent\s*:/.test(s)
+  if (!isNewFormat) {
+    const fenceStart = s.indexOf('```')
+    if (fenceStart !== -1) {
+      const afterLang = s.indexOf('\n', fenceStart)
+      if (afterLang !== -1) {
+        const lastFence = s.lastIndexOf('\n```')
+        if (lastFence > afterLang) s = s.slice(afterLang + 1, lastFence)
+      }
     }
   }
   s = s.replace(/[\u2018\u2019]/g, "'")
@@ -417,23 +453,24 @@ function sanitizeContent(code) {
   return s.trim()
 }
 
+const VALID_COMPLETION_RULES = ['all-steps', 'any-step', 'manual']
+
 function validateContent(content) {
   const errors   = []
   const warnings = []
 
-  if (!/export\s+default\s+/m.test(content))
-    errors.push("Manca export default — il componente principale non è esportato")
+  const isNewFormat      = /export\s+default\s+\{/.test(content) && /\bcomponent\s*:/.test(content)
+  const hasExportDefault = /export\s+default\s+/m.test(content)
+
+  if (!hasExportDefault) {
+    errors.push("Manca export default — il componente principale non \xe8 esportato")
+    return { valid: false, errors, warnings }
+  }
 
   const importMatches = [...content.matchAll(/^import\s+.+\s+from\s+['"]([^'"]+)['"]/gm)]
   const forbidden = importMatches.map(m => m[1]).filter(src => !ALLOWED_IMPORTS.includes(src))
   if (forbidden.length > 0)
     errors.push(`Import non consentiti: ${forbidden.join(', ')} — usa solo react e lucide-react`)
-
-  if (/new\s+Map\s*\(/.test(content))
-    errors.push("Uso di new Map() non consentito — causa conflitti con le icone Lucide")
-
-  if (/new\s+Set\s*\(/.test(content))
-    errors.push("Uso di new Set() non consentito — causa conflitti con le icone Lucide")
 
   const lines = content.trimEnd().split('\n')
   let lastMeaningful = ''
@@ -444,11 +481,28 @@ function validateContent(content) {
   if (!lastMeaningful.endsWith('}'))
     errors.push("Il file sembra troncato — l'ultima istruzione significativa non termina con }")
 
-  if (!/export\s+const\s+SENSEI_TYPE\s*=/.test(content))
-    warnings.push("SENSEI_TYPE non trovato — Sensei potrebbe non riconoscere il tipo dell'artifact")
-
-  if (!/export\s+const\s+SENSEI_STEPS\s*=/.test(content))
-    warnings.push("SENSEI_STEPS non trovato — il conteggio degli step potrebbe non essere corretto")
+  if (isNewFormat) {
+    if (!/meta\s*:\s*\{/.test(content))
+      errors.push("meta: blocco mancante nel Sensei Artifact Standard")
+    if (!/title\s*:\s*["'][^"']+["']/.test(content))
+      errors.push("meta.title mancante o non e' una stringa non vuota")
+    if (!/type\s*:\s*["'](sentiero|leaflet)["']/.test(content))
+      errors.push("meta.type deve essere 'sentiero' o 'leaflet'")
+    if (!/version\s*:\s*["'][^"']+["']/.test(content))
+      errors.push("meta.version mancante o non e' una stringa")
+    if (!/\bcomponent\s*:\s*\w/.test(content))
+      errors.push("component mancante — deve referenziare il componente React principale")
+    if (!/\bxp\s*:\s*\d+/.test(content))
+      errors.push("gamification.xp mancante o non e' un numero")
+    if (!VALID_COMPLETION_RULES.some(r => content.includes(`"${r}"`) || content.includes(`'${r}'`)))
+      errors.push("gamification.completionRule deve essere 'all-steps', 'any-step' o 'manual'")
+  } else {
+    warnings.push("Formato legacy — considera la migrazione al Sensei Artifact Standard")
+    if (!/export\s+const\s+SENSEI_TYPE\s*=/.test(content))
+      warnings.push("SENSEI_TYPE non trovato — Sensei potrebbe non riconoscere il tipo dell'artifact")
+    if (!/export\s+const\s+SENSEI_STEPS\s*=/.test(content))
+      warnings.push("SENSEI_STEPS non trovato — il conteggio degli step potrebbe non essere corretto")
+  }
 
   return { valid: errors.length === 0, errors, warnings }
 }
@@ -472,9 +526,12 @@ function sanitizeApostrophes(code) {
 ipcMain.handle('artifact:save', (event, { content, filename, name, icon, color }) => {
   try {
     const safeFilename = filename.endsWith('.jsx') ? filename : `${filename}.jsx`
-    const coursesDir   = path.join(app.getAppPath(), 'courses')
+    const slug         = safeFilename.replace(/\.jsx$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const courseId     = `${Date.now()}-${slug}`
+    const newFilename  = `${courseId}.jsx`
+    const coursesDir   = path.join(app.getPath('userData'), 'courses')
     const cleanContent = sanitizeApostrophes(stripMarkdownFence(content))
-    const savePath     = path.join(coursesDir, safeFilename)
+    const savePath     = path.join(coursesDir, newFilename)
 
     console.log('[artifact:save] path:', savePath)
     console.log('[artifact:save] content preview:', cleanContent.slice(0, 200))
@@ -483,14 +540,17 @@ ipcMain.handle('artifact:save', (event, { content, filename, name, icon, color }
     fs.writeFileSync(savePath, cleanContent, 'utf-8')
     console.log('[artifact:save] file exists after write:', fs.existsSync(savePath))
 
-    const courseId             = safeFilename.replace('.jsx', '')
-    const { type, totalSteps } = detectArtifactMeta(content)
-    const finalName            = name || courseId.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    const meta      = detectArtifactMeta(content)
+    const { type, totalSteps } = meta
+    const finalName = name || meta.title || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
     db.prepare(`
-      INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(courseId, finalName, safeFilename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
+      INSERT OR REPLACE INTO courses
+        (id, name, filename, total_days, icon, color, type, tags, estimated_minutes, xp, completion_rule, version, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(courseId, finalName, newFilename, totalSteps, icon || 'BookOpen', color || '#378ADD', type,
+      meta.tags || null, meta.estimatedMinutes || null, meta.xp || null,
+      meta.completionRule || null, meta.version || null, meta.description || null)
 
     return { success: true, courseId }
   } catch (err) {
@@ -502,7 +562,7 @@ ipcMain.handle('artifact:save', (event, { content, filename, name, icon, color }
 
 ipcMain.handle('artifact:log-error', (event, { filename, errors, source, timestamp }) => {
   try {
-    const logsDir = path.join(app.getAppPath(), 'logs')
+    const logsDir = path.join(app.getPath('userData'), 'logs')
     fs.mkdirSync(logsDir, { recursive: true })
     const logPath = path.join(logsDir, 'artifact-errors.jsonl')
     const entry   = JSON.stringify({ filename, errors, source, timestamp }) + '\n'

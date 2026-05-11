@@ -9,6 +9,7 @@ import React, { useEffect, useState, useRef } from 'react'
 // Es: l'icona Lucide "Map" sovrascrive window.Map — causa crash negli artifact
 // che usano Map nativo. La soluzione è rinominare l'icona in "_MapIcon".
 const JS_BUILTINS = ['Map', 'Set', 'Array', 'Object', 'Error', 'Event', 'URL', 'Image']
+const ALLOWED_ORIGIN = import.meta.env.DEV ? 'http://localhost:5173' : 'file://'
 
 // ── Trasformazione codice ─────────────────────────────────────────────────────
 // Funzione pura: non dipende dallo stato del componente, vive a livello di modulo
@@ -23,6 +24,9 @@ const JS_BUILTINS = ['Map', 'Set', 'Array', 'Object', 'Error', 'Event', 'URL', '
 //   5. Converte "export default" in "const __MainComponent" per il mounting manuale
 function transformCode(code) {
   const builtinsUsedAsIcons = new Set()
+
+  // Rileva formato: nuovo (Sensei Artifact Standard) vs legacy
+  const isNewFormat = /export\s+default\s+\{/.test(code) && /\bcomponent\s*:/.test(code)
 
   let transformed = code
     .replace(/^export\s+(const\s+SENSEI_TYPE\s*=.*)$/gm,  '$1')
@@ -48,7 +52,16 @@ function transformCode(code) {
       }).join('\n')
     )
     .replace(/^import\s+.*$/gm, '// import removed')
-    .replace(/^export\s+default\s+/m, 'const __MainComponent = ')
+
+  if (isNewFormat) {
+    // Nuovo formato: export default { meta, component, gamification }
+    // Wrappa l'oggetto in una variabile ed estrae component
+    transformed = transformed.replace(/export\s+default\s+\{/, 'const __SenseiArtifact = {')
+    transformed += '\nconst __MainComponent = __SenseiArtifact.component\n'
+  } else {
+    // Formato legacy: export default function/class/expression
+    transformed = transformed.replace(/^export\s+default\s+/m, 'const __MainComponent = ')
+  }
 
   // Rinomina i built-in rilevati anche nei riferimenti JSX e negli oggetti
   builtinsUsedAsIcons.forEach(name => {
@@ -167,7 +180,9 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
     loadCourse()
     completedNotified.current = false
     const handleMessage = (event) => {
-      if (event.data?.type === 'sensei-artifact-error') {
+      if (event.source !== iframeRef.current?.contentWindow) return
+      if (!event.data || typeof event.data.type !== 'string') return
+      if (event.data.type === 'sensei-artifact-error') {
         setError(event.data.message || 'Errore nell\'artifact')
         return
       }
@@ -266,7 +281,7 @@ function Course({ course, onBack, onProgressUpdate, onComplete }) {
 
     // Rimanda la risposta all'iframe usando lo stesso id della richiesta
     if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ id, result }, '*')
+      iframeRef.current.contentWindow.postMessage({ id, result }, ALLOWED_ORIGIN)
     }
   }
 

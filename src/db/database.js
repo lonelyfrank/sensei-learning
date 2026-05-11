@@ -64,6 +64,13 @@ const migrations = [
   `ALTER TABLE user ADD COLUMN welcomed INTEGER DEFAULT 0`,
   // v1.1 — aggiunge il tipo di artifact (sentiero/leaflet)
   `ALTER TABLE courses ADD COLUMN type TEXT DEFAULT 'sentiero'`,
+  // v1.2 — Sensei Artifact Standard: meta e gamification
+  `ALTER TABLE courses ADD COLUMN tags TEXT DEFAULT NULL`,
+  `ALTER TABLE courses ADD COLUMN estimated_minutes INTEGER DEFAULT NULL`,
+  `ALTER TABLE courses ADD COLUMN xp INTEGER DEFAULT NULL`,
+  `ALTER TABLE courses ADD COLUMN completion_rule TEXT DEFAULT NULL`,
+  `ALTER TABLE courses ADD COLUMN version TEXT DEFAULT NULL`,
+  `ALTER TABLE courses ADD COLUMN description TEXT DEFAULT NULL`,
 ]
 
 for (const migration of migrations) {
