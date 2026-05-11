@@ -2,6 +2,9 @@ node_modules/
 dist/
 dist-electron/
 *.db
+*.key
+*.enc
 .env
 .DS_Store
 courses/*.jsx
+logs/

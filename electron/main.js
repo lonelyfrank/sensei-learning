@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, net } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -120,10 +120,16 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
     if (!filePath.endsWith('.jsx'))
       return { success: false, error: 'Il file deve avere estensione .jsx' }
 
-    const code = fs.readFileSync(filePath, 'utf-8')
+    const raw = fs.readFileSync(filePath, 'utf-8')
 
-    if (!code.trim())
+    if (!raw.trim())
       return { success: false, error: 'Il file è vuoto' }
+
+    const cleanCode                       = sanitizeContent(raw)
+    const { valid, errors, warnings }     = validateContent(cleanCode)
+
+    if (!valid)
+      return { success: false, errors }
 
     const filename   = path.basename(filePath)
     const courseId   = filename.replace('.jsx', '')
@@ -131,9 +137,9 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
     const destPath   = path.join(coursesDir, filename)
 
     fs.mkdirSync(coursesDir, { recursive: true })
-    fs.copyFileSync(filePath, destPath)
+    fs.writeFileSync(destPath, cleanCode, 'utf-8')
 
-    const { type, totalSteps } = detectArtifactMeta(code)
+    const { type, totalSteps } = detectArtifactMeta(cleanCode)
     const name = customName || courseId
 
     db.prepare(`
@@ -141,9 +147,9 @@ ipcMain.handle('import-course', async (event, filePath, customName, icon, color)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(courseId, name, filename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
 
-    return { success: true, courseId, totalSteps, type }
+    return { success: true, courseId, totalSteps, type, warnings: warnings.length ? warnings : undefined }
   } catch (err) {
-    return { success: false, error: err.message || 'Errore durante l\'importazione' }
+    return { success: false, error: err.message || "Errore durante l'importazione" }
   }
 })
 
@@ -298,6 +304,213 @@ ipcMain.handle('open-external', (event, url) => {
 
 // Restituisce la versione dell'app da package.json
 ipcMain.handle('get-app-version', () => app.getVersion())
+
+// ─── ANTHROPIC API KEY ────────────────────────────────────────────────────────
+
+function keyPath() {
+  return path.join(app.getPath('userData'), 'anthropic.key')
+}
+
+ipcMain.handle('anthropic:save-key', (event, apiKey) => {
+  try {
+    fs.writeFileSync(keyPath(), apiKey.trim(), 'utf-8')
+    fs.chmodSync(keyPath(), 0o600)
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle('anthropic:has-key', () => {
+  if (!fs.existsSync(keyPath())) return false
+  return fs.readFileSync(keyPath(), 'utf-8').trim().length > 0
+})
+
+ipcMain.handle('anthropic:get-key', () => {
+  try {
+    if (!fs.existsSync(keyPath())) return null
+    return fs.readFileSync(keyPath(), 'utf-8').trim()
+  } catch {
+    return null
+  }
+})
+
+// ─── GENERAZIONE ARTIFACT VIA API ────────────────────────────────────────────
+
+ipcMain.handle('anthropic:generate', async (event, { description, systemPrompt }) => {
+  try {
+    if (!fs.existsSync(keyPath()))
+      return { success: false, error: 'API key non configurata. Vai in Impostazioni → API Key.' }
+
+    const apiKey = fs.readFileSync(keyPath(), 'utf-8').trim()
+    const keyPreview = apiKey.slice(0, 14) + '…'
+    console.log('[anthropic:generate] key prefix:', keyPreview, '| length:', apiKey.length)
+
+    if (!apiKey.startsWith('sk-ant-')) {
+      console.error('[anthropic:generate] key format invalid:', keyPreview)
+      return { success: false, error: `Formato chiave non valido (${keyPreview}). La chiave deve iniziare con sk-ant-` }
+    }
+
+    const res = await net.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 32000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: description }],
+      }),
+    })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      let errMsg = `HTTP ${res.status}`
+      try { errMsg = JSON.parse(body).error?.message || errMsg } catch {}
+      console.error('[anthropic:generate] API error', res.status, body)
+      return { success: false, error: `${errMsg} (status ${res.status})` }
+    }
+
+    const data = await res.json()
+    const content = data.content?.[0]?.text
+    if (!content) return { success: false, error: 'Risposta vuota dall\'API' }
+    return { success: true, content }
+  } catch (err) {
+    console.error('[anthropic:generate] exception:', err)
+    return { success: false, error: err.message }
+  }
+})
+
+// ─── SALVATAGGIO ARTIFACT GENERATO ───────────────────────────────────────────
+
+function stripMarkdownFence(code) {
+  const start = code.indexOf('```')
+  if (start === -1) return code.trim()
+  const afterLang = code.indexOf('\n', start)
+  if (afterLang === -1) return code.trim()
+  const lastFence = code.lastIndexOf('\n```')
+  if (lastFence <= afterLang) return code.trim()
+  return code.slice(afterLang + 1, lastFence).trim()
+}
+
+// ─── SANITIZE / VALIDATE (mirror di src/utils/ — main.js è CJS, non importa ESM) ──
+
+const ALLOWED_IMPORTS = ['react', 'lucide-react']
+
+function sanitizeContent(code) {
+  let s = code
+  s = s.replace(/^[\ufeff\u200b\u200c\u200d\u2060\ufffe]+/, '')
+  s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const fenceStart = s.indexOf('```')
+  if (fenceStart !== -1) {
+    const afterLang = s.indexOf('\n', fenceStart)
+    if (afterLang !== -1) {
+      const lastFence = s.lastIndexOf('\n```')
+      if (lastFence > afterLang) s = s.slice(afterLang + 1, lastFence)
+    }
+  }
+  s = s.replace(/[\u2018\u2019]/g, "'")
+  s = s.replace(/[\u201c\u201d]/g, '"')
+  return s.trim()
+}
+
+function validateContent(content) {
+  const errors   = []
+  const warnings = []
+
+  if (!/export\s+default\s+/m.test(content))
+    errors.push("Manca export default — il componente principale non è esportato")
+
+  const importMatches = [...content.matchAll(/^import\s+.+\s+from\s+['"]([^'"]+)['"]/gm)]
+  const forbidden = importMatches.map(m => m[1]).filter(src => !ALLOWED_IMPORTS.includes(src))
+  if (forbidden.length > 0)
+    errors.push(`Import non consentiti: ${forbidden.join(', ')} — usa solo react e lucide-react`)
+
+  if (/new\s+Map\s*\(/.test(content))
+    errors.push("Uso di new Map() non consentito — causa conflitti con le icone Lucide")
+
+  if (/new\s+Set\s*\(/.test(content))
+    errors.push("Uso di new Set() non consentito — causa conflitti con le icone Lucide")
+
+  const lines = content.trimEnd().split('\n')
+  let lastMeaningful = ''
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = lines[i].trim()
+    if (t && !t.startsWith('//') && !t.startsWith('*')) { lastMeaningful = t; break }
+  }
+  if (!lastMeaningful.endsWith('}'))
+    errors.push("Il file sembra troncato — l'ultima istruzione significativa non termina con }")
+
+  if (!/export\s+const\s+SENSEI_TYPE\s*=/.test(content))
+    warnings.push("SENSEI_TYPE non trovato — Sensei potrebbe non riconoscere il tipo dell'artifact")
+
+  if (!/export\s+const\s+SENSEI_STEPS\s*=/.test(content))
+    warnings.push("SENSEI_STEPS non trovato — il conteggio degli step potrebbe non essere corretto")
+
+  return { valid: errors.length === 0, errors, warnings }
+}
+
+// Corregge apostrofi dritti non escaped dentro stringhe con virgolette singole.
+// Es: description: 'l'acqua' → description: 'l'acqua'
+// Lascia intatti gli apostrofi già escaped (l\'acqua) e i template literal.
+function sanitizeApostrophes(code) {
+  return code.split('\n').map(line => {
+    const m = line.match(/^(\s*\w+\s*:\s*')(.*)',?\s*$/)
+    if (!m) return line
+    const content = m[2]
+    // conta apostrofi non preceduti da backslash
+    const unescaped = (content.match(/(?<!\\)'/g) || []).length
+    if (unescaped === 0) return line
+    const fixed = content.replace(/(?<!\\)'/g, '\u2019') // → ' curvo U+2019
+    return line.replace(`'${content}'`, `'${fixed}'`)
+  }).join('\n')
+}
+
+ipcMain.handle('artifact:save', (event, { content, filename, name, icon, color }) => {
+  try {
+    const safeFilename = filename.endsWith('.jsx') ? filename : `${filename}.jsx`
+    const coursesDir   = path.join(app.getAppPath(), 'courses')
+    const cleanContent = sanitizeApostrophes(stripMarkdownFence(content))
+    const savePath     = path.join(coursesDir, safeFilename)
+
+    console.log('[artifact:save] path:', savePath)
+    console.log('[artifact:save] content preview:', cleanContent.slice(0, 200))
+
+    fs.mkdirSync(coursesDir, { recursive: true })
+    fs.writeFileSync(savePath, cleanContent, 'utf-8')
+    console.log('[artifact:save] file exists after write:', fs.existsSync(savePath))
+
+    const courseId             = safeFilename.replace('.jsx', '')
+    const { type, totalSteps } = detectArtifactMeta(content)
+    const finalName            = name || courseId.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+    db.prepare(`
+      INSERT OR REPLACE INTO courses (id, name, filename, total_days, icon, color, type)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(courseId, finalName, safeFilename, totalSteps, icon || 'BookOpen', color || '#378ADD', type)
+
+    return { success: true, courseId }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// ─── LOG ERRORI ARTIFACT ──────────────────────────────────────────────────────
+
+ipcMain.handle('artifact:log-error', (event, { filename, errors, source, timestamp }) => {
+  try {
+    const logsDir = path.join(app.getAppPath(), 'logs')
+    fs.mkdirSync(logsDir, { recursive: true })
+    const logPath = path.join(logsDir, 'artifact-errors.jsonl')
+    const entry   = JSON.stringify({ filename, errors, source, timestamp }) + '\n'
+    fs.appendFileSync(logPath, entry, 'utf-8')
+  } catch {
+    // fire and forget — non blocca mai il flusso principale
+  }
+})
 
 // ─── CONTROLLI FINESTRA CUSTOM ───────────────────────────────────────────────
 

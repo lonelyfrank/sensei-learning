@@ -3,11 +3,13 @@ import { useTheme } from '../context/ThemeContext.jsx'
 import UserSection from '../settings/UserSection.jsx'
 import ThemesSection from '../settings/ThemesSection.jsx'
 import VersionSection from '../settings/VersionSection.jsx'
+import AnthropicSection from '../settings/AnthropicSection.jsx'
 
 const SECTIONS = [
-  { id: 'user',    label: 'Profilo' },
-  { id: 'themes',  label: 'Aspetto' },
-  { id: 'version', label: 'Versione' },
+  { id: 'user',      label: 'Profilo' },
+  { id: 'themes',    label: 'Aspetto' },
+  { id: 'anthropic', label: 'API Key' },
+  { id: 'version',   label: 'Versione' },
 ]
 
 function Settings({ onBack, onSave }) {
@@ -71,9 +73,10 @@ function Settings({ onBack, onSave }) {
 
       {/* ── CONTENUTO DESTRA ── */}
       <div style={{ flex: 1, overflow: 'hidden', padding: section === 'version' ? 0 : '28px 32px', display: 'flex', flexDirection: 'column' }}>
-        {section === 'user'    && <UserSection onSave={onSave} />}
-        {section === 'themes'  && <ThemesSection currentTheme={theme} onApplyTheme={applyTheme} />}
-        {section === 'version' && <VersionSection />}
+        {section === 'user'      && <UserSection onSave={onSave} />}
+        {section === 'themes'    && <ThemesSection currentTheme={theme} onApplyTheme={applyTheme} />}
+        {section === 'anthropic' && <AnthropicSection />}
+        {section === 'version'   && <VersionSection />}
       </div>
 
     </div>

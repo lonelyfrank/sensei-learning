@@ -59,4 +59,18 @@ contextBridge.exposeInMainWorld('sensei', {
   // Versione dell'app (da package.json via app.getVersion())
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+  // Anthropic API key (cifrata via safeStorage)
+  anthropic: {
+    saveKey:  (key)    => ipcRenderer.invoke('anthropic:save-key', key),
+    hasKey:   ()       => ipcRenderer.invoke('anthropic:has-key'),
+    getKey:   ()       => ipcRenderer.invoke('anthropic:get-key'),
+    generate: (params) => ipcRenderer.invoke('anthropic:generate', params),
+  },
+
+  // Salva un artifact generato in courses/ e lo registra nel DB
+  saveArtifact: (params) => ipcRenderer.invoke('artifact:save', params),
+
+  // Traccia errori di validazione artifact su logs/artifact-errors.jsonl (fire and forget)
+  logArtifactError: (data) => ipcRenderer.invoke('artifact:log-error', data),
+
 })

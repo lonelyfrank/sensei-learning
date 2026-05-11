@@ -59,6 +59,7 @@ function App() {
   const viewTransitionRef               = useRef(null)
 
   const [importing, setImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState([])
 
   const { toasts, removeToast, toastComplete, toastError, toastSuccess } = useToast()
 
@@ -130,6 +131,7 @@ function App() {
     const filename       = filePath.split(/[\\/]/).pop()
     const courseId       = filename.replace('.jsx', '')
     const suggestedName  = formatCourseName(courseId)
+    setImportErrors([])
     setImportDialog({ filePath, suggestedName, icon: 'BookOpen', color: '#378ADD' })
   }
 
@@ -137,14 +139,43 @@ function App() {
     setImporting(true)
     try {
       const result = await window.sensei.importCourse(filePath, name, icon, color)
-      if (!result?.success) throw new Error(result?.error || 'Errore durante l\'importazione')
+
+      if (result?.errors?.length) {
+        // Validazione fallita — mantieni il dialog aperto e mostra gli errori
+        setImportErrors(result.errors)
+        window.sensei.logArtifactError({
+          filename: filePath.split(/[\\/]/).pop(),
+          errors:   result.errors,
+          source:   'manual',
+          timestamp: new Date().toISOString(),
+        }).catch(() => {})
+        return
+      }
+
+      if (!result?.success) {
+        toastError('Import fallito', result?.error || "Errore durante l'importazione")
+        setImportDialog(null)
+        return
+      }
+
+      if (result.warnings?.length) {
+        window.sensei.logArtifactError({
+          filename:  filePath.split(/[\\/]/).pop(),
+          errors:    [],
+          warnings:  result.warnings,
+          source:    'manual',
+          timestamp: new Date().toISOString(),
+        }).catch(() => {})
+      }
       toastSuccess('Artifact importato', name)
+      setImportErrors([])
+      setImportDialog(null)
       loadCourses()
     } catch (err) {
       toastError('Import fallito', err.message)
+      setImportDialog(null)
     } finally {
       setImporting(false)
-      setImportDialog(null)
     }
   }
 
@@ -225,11 +256,17 @@ function App() {
           )}
 
           {currentView === 'create' && currentCreateMode === 'sentiero-ai' && (
-            <CreateSentieroAI onBack={() => setCurrentCreateMode(null)} />
+            <CreateSentieroAI
+              onBack={() => setCurrentCreateMode(null)}
+              onImported={() => { loadCourses(); handleNavigate('home') }}
+            />
           )}
 
           {currentView === 'create' && currentCreateMode === 'leaflet-ai' && (
-            <CreateLeafletAI onBack={() => setCurrentCreateMode(null)} />
+            <CreateLeafletAI
+              onBack={() => setCurrentCreateMode(null)}
+              onImported={() => { loadCourses(); handleNavigate('home') }}
+            />
           )}
 
         </div>
@@ -260,8 +297,9 @@ function App() {
           defaultIcon={importDialog.icon}
           defaultColor={importDialog.color}
           onConfirm={handleImportConfirm}
-          onCancel={() => setImportDialog(null)}
+          onCancel={() => { setImportDialog(null); setImportErrors([]) }}
           loading={importing}
+          errors={importErrors}
         />
       )}
 
@@ -274,10 +312,13 @@ function App() {
 // ─── Dialogo di importazione artifact ────────────────────────────────────────
 // Permette di personalizzare nome, icona e colore prima dell'importazione.
 // Supporta conferma con Invio e chiusura con Esc.
-function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel, loading }) {
+function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onConfirm, onCancel, loading, errors }) {
   const [name,  setName]  = useState(suggestedName)
   const [icon,  setIcon]  = useState(defaultIcon)
   const [color, setColor] = useState(defaultColor)
+
+  const hasErrors = errors?.length > 0
+  const canImport = !loading && !hasErrors
 
   useEffect(() => {
     const handle = (e) => { if (e.key === 'Escape') onCancel() }
@@ -296,14 +337,27 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
           value={name}
           onChange={e => setName(e.target.value)}
           autoFocus
-          onKeyDown={e => { if (e.key === 'Enter') onConfirm(filePath, name, icon, color) }}
+          onKeyDown={e => { if (e.key === 'Enter' && canImport) onConfirm(filePath, name, icon, color) }}
           style={{ width: '100%', padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none', marginBottom: 20 }}
         />
 
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 10 }}>Icona e colore</label>
         <IconPicker selectedIcon={icon} selectedColor={color} onSelectIcon={setIcon} onSelectColor={setColor} />
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 24 }}>
+        {hasErrors && (
+          <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 'var(--radius-md)', background: '#E24B4A12', border: '0.5px solid #E24B4A44' }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: '#E24B4A', margin: '0 0 6px' }}>
+              Artifact non valido — correggi il file e riprova
+            </p>
+            <ul style={{ margin: 0, padding: '0 0 0 16px' }}>
+              {errors.map((err, i) => (
+                <li key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
           <button
             onClick={onCancel}
             style={{ padding: '7px 16px', fontSize: 13, color: 'var(--text-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}
@@ -313,11 +367,11 @@ function ImportDialog({ suggestedName, filePath, defaultIcon, defaultColor, onCo
             Annulla
           </button>
           <button
-            onClick={() => !loading && onConfirm(filePath, name, icon, color)}
-            disabled={loading}
-            style={{ padding: '7px 16px', fontSize: 13, color: '#fff', background: color, border: 'none', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s', opacity: loading ? 0.6 : 1, cursor: loading ? 'default' : 'pointer' }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85' }}
-            onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1' }}
+            onClick={() => canImport && onConfirm(filePath, name, icon, color)}
+            disabled={!canImport}
+            style={{ padding: '7px 16px', fontSize: 13, color: canImport ? '#fff' : 'var(--text-tertiary)', background: canImport ? color : 'var(--bg-secondary)', border: canImport ? 'none' : '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', transition: 'opacity 0.15s', opacity: loading ? 0.6 : 1, cursor: canImport ? 'pointer' : 'default' }}
+            onMouseEnter={e => { if (canImport) e.currentTarget.style.opacity = '0.85' }}
+            onMouseLeave={e => { if (canImport) e.currentTarget.style.opacity = '1' }}
           >
             {loading ? 'Importazione…' : 'Importa'}
           </button>

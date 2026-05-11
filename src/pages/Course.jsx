@@ -25,8 +25,8 @@ function transformCode(code) {
   const builtinsUsedAsIcons = new Set()
 
   let transformed = code
-    .replace(/^export\s+const\s+SENSEI_TYPE\s*=.*$/gm,  '// SENSEI_TYPE removed')
-    .replace(/^export\s+const\s+SENSEI_STEPS\s*=.*$/gm, '// SENSEI_STEPS removed')
+    .replace(/^export\s+(const\s+SENSEI_TYPE\s*=.*)$/gm,  '$1')
+    .replace(/^export\s+(const\s+SENSEI_STEPS\s*=.*)$/gm, '$1')
     .replace(/import\s+React.*?from\s+['"]react['"]/g, '// react global')
     .replace(/import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g, (_, imports) =>
       imports.split(',').map(i => {
