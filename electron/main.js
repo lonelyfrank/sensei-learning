@@ -198,11 +198,11 @@ ipcMain.handle('read-course-file', (event, filename) => {
   return fs.readFileSync(filePath, 'utf-8')
 })
 
-// Serve il bundle UMD di lucide-react locale
+// Serve il bundle IIFE di lucide-react locale (generato in public/ via build script)
 ipcMain.handle('get-lucide-bundle', () => {
   const filePath = app.isPackaged
     ? path.join(process.resourcesPath, 'lucide-react.min.js')
-    : path.join(app.getAppPath(), 'node_modules/lucide-react/dist/umd/lucide-react.min.js')
+    : path.join(app.getAppPath(), 'public/lucide-react.min.js')
   if (!fs.existsSync(filePath)) return null
   return fs.readFileSync(filePath, 'utf-8')
 })

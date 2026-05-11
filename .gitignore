@@ -8,3 +8,4 @@ dist-electron/
 .DS_Store
 courses/*.jsx
 logs/
+public/lucide-react.min.js
