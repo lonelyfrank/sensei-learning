@@ -22,11 +22,9 @@ function TitleBar() {
   return (
     <div style={{
       WebkitAppRegion: 'drag',
-      position: 'relative',
       height: 40,
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
       padding: '0 10px 0 14px',
       background: 'var(--bg-secondary)',
       borderBottom: '0.5px solid var(--border)',
@@ -34,15 +32,22 @@ function TitleBar() {
       userSelect: 'none',
     }}>
 
-      <SenseiLogo style={{ width: 28, height: 28, color: 'var(--logo-color)', flexShrink: 0 }} />
+      {/* Spacer sinistro — bilancia i controlli per centrare logo+nome */}
+      <div style={{ width: 82, flexShrink: 0 }} />
 
-      <span style={{
-        position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-        fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
-        letterSpacing: '-0.2px', pointerEvents: 'none',
+      {/* Logo + nome centrati insieme, stile Discord */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', gap: 7, pointerEvents: 'none',
       }}>
-        Sensei
-      </span>
+        <SenseiLogo style={{ width: 22, height: 22, color: 'var(--logo-color)', flexShrink: 0 }} />
+        <span style={{
+          fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+          letterSpacing: '-0.2px',
+        }}>
+          Sensei
+        </span>
+      </div>
 
       {/* Controlli stile GNOME — cerchi neutri, close in rosso all'hover */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2, WebkitAppRegion: 'no-drag' }}>
