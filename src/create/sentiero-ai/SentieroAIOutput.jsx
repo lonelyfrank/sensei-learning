@@ -26,10 +26,14 @@ function GeneratingScreen({ messages, stars }) {
   useEffect(() => {
     const msg = messages[idx]
     if (charIdx < msg.length) {
+      const ch = msg[charIdx]
+      const delay = /[.,!?…]/.test(ch) ? 180 + Math.random() * 80
+                  : ch === ' '         ?  55 + Math.random() * 30
+                  :                       32 + Math.random() * 40
       const t = setTimeout(() => {
         setDisplayed(msg.slice(0, charIdx + 1))
         setCharIdx(c => c + 1)
-      }, 38)
+      }, delay)
       return () => clearTimeout(t)
     } else {
       const t = setTimeout(() => {
