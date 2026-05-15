@@ -15,8 +15,8 @@ Pre-built binaries are available on the [GitHub Releases](../../releases) page:
 
 | Platform | File |
 |----------|------|
-| Windows  | `Sensei Learning Setup 1.0.0.exe` |
-| Linux    | `Sensei Learning-1.0.0.AppImage` |
+| Windows  | `sensei-learning-setup-v1.0.0.exe` |
+| Linux    | `sensei-learning-v1.0.0.AppImage` |
 
 > macOS builds are not currently distributed. Build from source on macOS if needed.
 
