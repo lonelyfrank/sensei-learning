@@ -9,6 +9,32 @@
 
 ---
 
+## ⬇️ Download
+
+Pre-built binaries are available on the [GitHub Releases](../../releases) page:
+
+| Platform | File |
+|----------|------|
+| Windows  | `Sensei Learning Setup 1.0.0.exe` |
+| Linux    | `Sensei Learning-1.0.0.AppImage` |
+
+> macOS builds are not currently distributed. Build from source on macOS if needed.
+
+---
+
+## 🔨 Build from source
+
+```bash
+git clone https://github.com/lonelyfrank/sensei-learning.git
+cd sensei-learning
+npm install       # also recompiles better-sqlite3 for Electron via postinstall
+npm run dist      # vite build + electron-builder → output in dist-electron/
+```
+
+> `dist/` and `dist-electron/` are gitignored and not part of the repository.
+
+---
+
 ## 📸 Screenshot
 
 <p align="center">

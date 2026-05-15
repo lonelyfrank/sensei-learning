@@ -12,6 +12,7 @@
     "build": "vite build",
     "dist": "npm run build && electron-builder",
     "preview": "vite preview",
+    "postinstall": "electron-builder install-app-deps",
     "lint": "eslint src electron --ext .js,.jsx",
     "format": "prettier --write src electron"
   },
