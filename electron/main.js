@@ -6,7 +6,7 @@ const archiver = require('archiver')
 const AdmZip = require('adm-zip')
 
 // Controlla se siamo in modalità sviluppo
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = !app.isPackaged
 
 // Importa il database
 const db = require('../src/db/database.js')
